@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>纳指 ETF 日记录</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --text: #20242a;
+      --muted: #667085;
+      --line: #d8dde6;
+      --header: #263241;
+      --up: #b42318;
+      --down: #067647;
+      --flat: #475467;
+      --accent: #2f6fed;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft YaHei", Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    main {
+      width: min(1280px, calc(100% - 32px));
+      margin: 24px auto;
+    }
+    .top {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    h1 {
+      margin: 0 0 4px;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 4px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+    table {
+      width: 100%;
+      min-width: 1120px;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--header);
+      color: #ffffff;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) { background: #fbfcfe; }
+    tbody tr:hover { background: #eef4ff; }
+    td.num, td.mono {
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    td.num { text-align: right; }
+    td.date-cell {
+      background: #f3f6fb;
+      border-right: 1px solid var(--line);
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .up { color: var(--up); font-weight: 600; }
+    .down { color: var(--down); font-weight: 600; }
+    .flat { color: var(--flat); }
+    .empty td {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px 12px;
+    }
+    .note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    @media (max-width: 720px) {
+      main { width: min(100% - 20px, 1280px); margin: 16px auto; }
+      .top { align-items: flex-start; flex-direction: column; }
+      h1 { font-size: 20px; }
+      th, td { padding: 9px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="top" aria-label="概览">
+      <div>
+        <h1>纳指 ETF 日记录</h1>
+        <div class="meta">
+          <span class="pill">最新交易日：2026-06-05</span>
+          <span class="pill">记录数：15</span>
+          <span class="pill">交易日数：5</span>
+        </div>
+      </div>
+      <div class="meta">
+        <span class="pill">最近更新：2026-06-05 15:18:47</span>
+      </div>
+    </section>
+    <section class="table-wrap" aria-label="记录表">
+      <table>
+        <thead><tr><th>交易日期</th><th>代码</th><th>名称</th><th>当前价格</th><th>当天涨幅</th><th>T-1估值</th><th>溢价率</th><th>T-1估值日</th><th>数据源</th></tr></thead>
+        <tbody>
+<tr><td class="date-cell" rowspan="3">2026-06-05</td><td class="mono">513100</td><td>纳指ETF国泰</td><td class="num">2.205</td><td class="num down">-1.56%</td><td class="num">2.0703</td><td class="num up">6.51%</td><td>2026-06-04</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
+<tr><td class="mono">159501</td><td>纳指ETF嘉实</td><td class="num">2.087</td><td class="num down">-0.95%</td><td class="num">1.9434</td><td class="num up">7.39%</td><td>2026-06-04</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
+<tr><td class="mono">159659</td><td>纳斯达克100ETF招商</td><td class="num">2.322</td><td class="num down">-1.36%</td><td class="num">2.2286</td><td class="num up">4.19%</td><td>2026-06-04</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
+<tr><td class="date-cell" rowspan="3">2026-06-04</td><td class="mono">513100</td><td>纳指ETF国泰</td><td class="num">2.240</td><td class="num down">-2.57%</td><td class="num">2.0808</td><td class="num up">7.65%</td><td>2026-06-03</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
+<tr><td class="mono">159501</td><td>纳指ETF嘉实</td><td class="num">2.107</td><td class="num down">-2.14%</td><td class="num">1.9533</td><td class="num up">7.87%</td><td>2026-06-03</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
+<tr><td class="mono">159659</td><td>纳斯达克100ETF招商</td><td class="num">2.354</td><td class="num down">-2.16%</td><td class="num">2.2400</td><td class="num up">5.09%</td><td>2026-06-03</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
+<tr><td class="date-cell" rowspan="3">2026-06-03</td><td class="mono">513100</td><td>纳指ETF国泰</td><td class="num">2.299</td><td class="num down">-1.88%</td><td class="num">2.0870</td><td class="num up">10.16%</td><td>2026-06-02</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
+<tr><td class="mono">159501</td><td>纳指ETF嘉实</td><td class="num">2.153</td><td class="num down">-1.46%</td><td class="num">1.9591</td><td class="num up">9.89%</td><td>2026-06-02</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
+<tr><td class="mono">159659</td><td>纳斯达克100ETF招商</td><td class="num">2.406</td><td class="num down">-1.43%</td><td class="num">2.2466</td><td class="num up">7.09%</td><td>2026-06-02</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
+<tr><td class="date-cell" rowspan="3">2026-06-02</td><td class="mono">513100</td><td>国泰纳指100</td><td class="num">2.343</td><td class="num down">-0.93%</td><td class="num">2.0766</td><td class="num up">12.83%</td><td>2026-06-01</td><td>n.tinyright quote and T-1 valuation</td></tr>
+<tr><td class="mono">159501</td><td>嘉实纳指100</td><td class="num">2.185</td><td class="num down">-0.68%</td><td class="num">1.9494</td><td class="num up">12.09%</td><td>2026-06-01</td><td>n.tinyright quote and T-1 valuation</td></tr>
+<tr><td class="mono">159659</td><td>招商纳指100</td><td class="num">2.441</td><td class="num down">-1.33%</td><td class="num">2.2353</td><td class="num up">9.20%</td><td>2026-06-01</td><td>n.tinyright quote and T-1 valuation</td></tr>
+<tr><td class="date-cell" rowspan="3">2026-06-01</td><td class="mono">513100</td><td>纳指ETF国泰</td><td class="num">2.365</td><td class="num up">4.05%</td><td class="num">2.0767</td><td class="num up">13.88%</td><td>2026-06-01</td><td>existing historical quote; user-provided T-1 valuation</td></tr>
+<tr><td class="mono">159501</td><td>纳指ETF嘉实</td><td class="num">2.200</td><td class="num up">3.68%</td><td class="num">1.9494</td><td class="num up">12.86%</td><td>2026-06-01</td><td>existing historical quote; user-provided T-1 valuation</td></tr>
+<tr><td class="mono">159659</td><td>纳斯达克100ETF招商</td><td class="num">2.474</td><td class="num up">3.86%</td><td class="num">2.2353</td><td class="num up">10.68%</td><td>2026-06-01</td><td>existing historical quote; n.tinyright T-1 valuation</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <p class="note">溢价率 = 当前价格 / T-1 估值 - 1。相同交易日期和代码重复运行时更新原行。</p>
+  </main>
+  <script id="records-data" type="application/json">[
+  {
+    "trade_date": "2026-06-05",
+    "recorded_at": "2026-06-05 15:18:47",
+    "code": "513100",
+    "name": "纳指ETF国泰",
+    "price": 2.205,
+    "daily_change": -0.015600000000000001,
+    "estimate": 2.0703,
+    "premium": 0.06509999999999999,
+    "quote_time": "2026-06-05 15:18:48",
+    "estimate_time": "2026-06-04",
+    "source": "Eastmoney quote; n.tinyright T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-05",
+    "recorded_at": "2026-06-05 15:18:47",
+    "code": "159501",
+    "name": "纳指ETF嘉实",
+    "price": 2.087,
+    "daily_change": -0.0095,
+    "estimate": 1.9434,
+    "premium": 0.0739,
+    "quote_time": "2026-06-05 15:18:30",
+    "estimate_time": "2026-06-04",
+    "source": "Eastmoney quote; n.tinyright T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-05",
+    "recorded_at": "2026-06-05 15:18:47",
+    "code": "159659",
+    "name": "纳斯达克100ETF招商",
+    "price": 2.322,
+    "daily_change": -0.013600000000000001,
+    "estimate": 2.2286,
+    "premium": 0.04190000000000001,
+    "quote_time": "2026-06-05 15:18:48",
+    "estimate_time": "2026-06-04",
+    "source": "Eastmoney quote; n.tinyright T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-04",
+    "recorded_at": "2026-06-04 16:28:04",
+    "code": "513100",
+    "name": "纳指ETF国泰",
+    "price": 2.24,
+    "daily_change": -0.025699999999999997,
+    "estimate": 2.0808,
+    "premium": 0.0765,
+    "quote_time": "2026-06-04 16:12:02",
+    "estimate_time": "2026-06-03",
+    "source": "Eastmoney quote; n.tinyright T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-04",
+    "recorded_at": "2026-06-04 16:28:04",
+    "code": "159501",
+    "name": "纳指ETF嘉实",
+    "price": 2.107,
+    "daily_change": -0.021400000000000002,
+    "estimate": 1.9533,
+    "premium": 0.0787,
+    "quote_time": "2026-06-04 15:34:09",
+    "estimate_time": "2026-06-03",
+    "source": "Eastmoney quote; n.tinyright T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-04",
+    "recorded_at": "2026-06-04 16:28:04",
+    "code": "159659",
+    "name": "纳斯达克100ETF招商",
+    "price": 2.354,
+    "daily_change": -0.0216,
+    "estimate": 2.24,
+    "premium": 0.0509,
+    "quote_time": "2026-06-04 15:34:30",
+    "estimate_time": "2026-06-03",
+    "source": "Eastmoney quote; n.tinyright T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-03",
+    "recorded_at": "2026-06-03 16:05:49",
+    "code": "513100",
+    "name": "纳指ETF国泰",
+    "price": 2.299,
+    "daily_change": -0.018799999999999997,
+    "estimate": 2.087,
+    "premium": 0.1016,
+    "quote_time": "2026-06-03 16:05:41",
+    "estimate_time": "2026-06-02",
+    "source": "Eastmoney quote; n.tinyright T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-03",
+    "recorded_at": "2026-06-03 16:05:49",
+    "code": "159501",
+    "name": "纳指ETF嘉实",
+    "price": 2.153,
+    "daily_change": -0.0146,
+    "estimate": 1.9591,
+    "premium": 0.0989,
+    "quote_time": "2026-06-03 15:34:00",
+    "estimate_time": "2026-06-02",
+    "source": "Eastmoney quote; n.tinyright T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-03",
+    "recorded_at": "2026-06-03 16:05:49",
+    "code": "159659",
+    "name": "纳斯达克100ETF招商",
+    "price": 2.406,
+    "daily_change": -0.0143,
+    "estimate": 2.2466,
+    "premium": 0.0709,
+    "quote_time": "2026-06-03 15:34:30",
+    "estimate_time": "2026-06-02",
+    "source": "Eastmoney quote; n.tinyright T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-02",
+    "recorded_at": "2026-06-02 16:53:08",
+    "code": "513100",
+    "name": "国泰纳指100",
+    "price": 2.343,
+    "daily_change": -0.009300000000000001,
+    "estimate": 2.0766,
+    "premium": 0.1283,
+    "quote_time": "2026-06-02 14:59:00",
+    "estimate_time": "2026-06-01",
+    "source": "n.tinyright quote and T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-02",
+    "recorded_at": "2026-06-02 16:53:08",
+    "code": "159501",
+    "name": "嘉实纳指100",
+    "price": 2.185,
+    "daily_change": -0.0068000000000000005,
+    "estimate": 1.9494,
+    "premium": 0.1209,
+    "quote_time": "2026-06-02 14:59:00",
+    "estimate_time": "2026-06-01",
+    "source": "n.tinyright quote and T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-02",
+    "recorded_at": "2026-06-02 16:53:08",
+    "code": "159659",
+    "name": "招商纳指100",
+    "price": 2.441,
+    "daily_change": -0.013300000000000001,
+    "estimate": 2.2353,
+    "premium": 0.092,
+    "quote_time": "2026-06-02 14:59:00",
+    "estimate_time": "2026-06-01",
+    "source": "n.tinyright quote and T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-01",
+    "recorded_at": "2026-06-02 17:11:05",
+    "code": "513100",
+    "name": "纳指ETF国泰",
+    "price": 2.365,
+    "daily_change": 0.0405,
+    "estimate": 2.0767,
+    "premium": 0.13882602205422057,
+    "quote_time": "2026-06-01 15:00:00",
+    "estimate_time": "2026-06-01",
+    "source": "existing historical quote; user-provided T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-01",
+    "recorded_at": "2026-06-02 17:11:05",
+    "code": "159501",
+    "name": "纳指ETF嘉实",
+    "price": 2.2,
+    "daily_change": 0.0368,
+    "estimate": 1.9494,
+    "premium": 0.12855237508977124,
+    "quote_time": "2026-06-01 15:00:00",
+    "estimate_time": "2026-06-01",
+    "source": "existing historical quote; user-provided T-1 valuation"
+  },
+  {
+    "trade_date": "2026-06-01",
+    "recorded_at": "2026-06-02 16:55:21",
+    "code": "159659",
+    "name": "纳斯达克100ETF招商",
+    "price": 2.474,
+    "daily_change": 0.038599999999999995,
+    "estimate": 2.2353427658335216,
+    "premium": 0.1067653864160234,
+    "quote_time": "2026-06-01 15:00:00",
+    "estimate_time": "2026-06-01",
+    "source": "existing historical quote; n.tinyright T-1 valuation"
+  }
+]</script>
+</body>
+</html>
