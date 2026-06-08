@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>纳指 ETF 日记录</title>
+  <title>纳指跟踪记录</title>
   <style>
     :root {
       color-scheme: light;
@@ -28,7 +28,7 @@
       line-height: 1.5;
     }
     main {
-      width: min(1280px, calc(100% - 32px));
+      width: min(1320px, calc(100% - 32px));
       margin: 24px auto;
     }
     .top {
@@ -36,13 +36,16 @@
       align-items: end;
       justify-content: space-between;
       gap: 16px;
-      margin-bottom: 14px;
+      margin-bottom: 18px;
     }
     h1 {
       margin: 0 0 4px;
       font-size: 22px;
       font-weight: 700;
       letter-spacing: 0;
+    }
+    .section-block {
+      margin-top: 14px;
     }
     .meta {
       display: flex;
@@ -63,10 +66,84 @@
       border: 1px solid var(--line);
       background: var(--panel);
     }
+    .drawdown-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin: 0 0 12px;
+    }
+    .drawdown-item {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 10px 12px;
+    }
+    .drawdown-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    .drawdown-code {
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .drawdown-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .drawdown-row strong {
+      color: var(--text);
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+    .tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 16px 0 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .tab-button {
+      appearance: none;
+      border: 1px solid transparent;
+      border-bottom: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      font-weight: 600;
+      padding: 9px 14px;
+      min-height: 38px;
+    }
+    .tab-button:hover {
+      color: var(--text);
+      background: #eef4ff;
+    }
+    .tab-button[aria-selected="true"] {
+      background: var(--panel);
+      border-color: var(--line);
+      color: var(--accent);
+      position: relative;
+      top: 1px;
+    }
+    .tab-panel[hidden] {
+      display: none;
+    }
     table {
       width: 100%;
       min-width: 1120px;
       border-collapse: collapse;
+    }
+    .compact table {
+      min-width: 900px;
     }
     th, td {
       padding: 10px 12px;
@@ -99,6 +176,13 @@
       text-align: center;
       vertical-align: middle;
     }
+    td.source-url {
+      max-width: 520px;
+      white-space: normal;
+      word-break: break-all;
+      color: var(--muted);
+      font-size: 12px;
+    }
     .up { color: var(--up); font-weight: 600; }
     .down { color: var(--down); font-weight: 600; }
     .flat { color: var(--flat); }
@@ -112,10 +196,19 @@
       color: var(--muted);
       font-size: 12px;
     }
+    .data-error {
+      border: 1px solid #fecdca;
+      background: #fff1f0;
+      color: #b42318;
+      padding: 10px 12px;
+      margin: 12px 0 0;
+    }
     @media (max-width: 720px) {
-      main { width: min(100% - 20px, 1280px); margin: 16px auto; }
+      main { width: min(100% - 20px, 1320px); margin: 16px auto; }
       .top { align-items: flex-start; flex-direction: column; }
       h1 { font-size: 20px; }
+      .tabs { overflow-x: auto; }
+      .tab-button { flex: 0 0 auto; padding: 8px 12px; }
       th, td { padding: 9px 10px; }
     }
   </style>
@@ -124,237 +217,256 @@
   <main>
     <section class="top" aria-label="概览">
       <div>
-        <h1>纳指 ETF 日记录</h1>
+        <h1>纳指跟踪记录</h1>
         <div class="meta">
-          <span class="pill">最新交易日：2026-06-05</span>
-          <span class="pill">记录数：15</span>
-          <span class="pill">交易日数：5</span>
+          <span class="pill">最新日期：<span id="latest-date">-</span></span>
         </div>
       </div>
       <div class="meta">
-        <span class="pill">最近更新：2026-06-05 15:18:47</span>
+        <span class="pill">最近更新：<span id="updated-at">-</span></span>
       </div>
     </section>
-    <section class="table-wrap" aria-label="记录表">
-      <table>
-        <thead><tr><th>交易日期</th><th>代码</th><th>名称</th><th>当前价格</th><th>当天涨幅</th><th>T-1估值</th><th>溢价率</th><th>T-1估值日</th><th>数据源</th></tr></thead>
-        <tbody>
-<tr><td class="date-cell" rowspan="3">2026-06-05</td><td class="mono">513100</td><td>纳指ETF国泰</td><td class="num">2.205</td><td class="num down">-1.56%</td><td class="num">2.0703</td><td class="num up">6.51%</td><td>2026-06-04</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
-<tr><td class="mono">159501</td><td>纳指ETF嘉实</td><td class="num">2.087</td><td class="num down">-0.95%</td><td class="num">1.9434</td><td class="num up">7.39%</td><td>2026-06-04</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
-<tr><td class="mono">159659</td><td>纳斯达克100ETF招商</td><td class="num">2.322</td><td class="num down">-1.36%</td><td class="num">2.2286</td><td class="num up">4.19%</td><td>2026-06-04</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
-<tr><td class="date-cell" rowspan="3">2026-06-04</td><td class="mono">513100</td><td>纳指ETF国泰</td><td class="num">2.240</td><td class="num down">-2.57%</td><td class="num">2.0808</td><td class="num up">7.65%</td><td>2026-06-03</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
-<tr><td class="mono">159501</td><td>纳指ETF嘉实</td><td class="num">2.107</td><td class="num down">-2.14%</td><td class="num">1.9533</td><td class="num up">7.87%</td><td>2026-06-03</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
-<tr><td class="mono">159659</td><td>纳斯达克100ETF招商</td><td class="num">2.354</td><td class="num down">-2.16%</td><td class="num">2.2400</td><td class="num up">5.09%</td><td>2026-06-03</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
-<tr><td class="date-cell" rowspan="3">2026-06-03</td><td class="mono">513100</td><td>纳指ETF国泰</td><td class="num">2.299</td><td class="num down">-1.88%</td><td class="num">2.0870</td><td class="num up">10.16%</td><td>2026-06-02</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
-<tr><td class="mono">159501</td><td>纳指ETF嘉实</td><td class="num">2.153</td><td class="num down">-1.46%</td><td class="num">1.9591</td><td class="num up">9.89%</td><td>2026-06-02</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
-<tr><td class="mono">159659</td><td>纳斯达克100ETF招商</td><td class="num">2.406</td><td class="num down">-1.43%</td><td class="num">2.2466</td><td class="num up">7.09%</td><td>2026-06-02</td><td>Eastmoney quote; n.tinyright T-1 valuation</td></tr>
-<tr><td class="date-cell" rowspan="3">2026-06-02</td><td class="mono">513100</td><td>国泰纳指100</td><td class="num">2.343</td><td class="num down">-0.93%</td><td class="num">2.0766</td><td class="num up">12.83%</td><td>2026-06-01</td><td>n.tinyright quote and T-1 valuation</td></tr>
-<tr><td class="mono">159501</td><td>嘉实纳指100</td><td class="num">2.185</td><td class="num down">-0.68%</td><td class="num">1.9494</td><td class="num up">12.09%</td><td>2026-06-01</td><td>n.tinyright quote and T-1 valuation</td></tr>
-<tr><td class="mono">159659</td><td>招商纳指100</td><td class="num">2.441</td><td class="num down">-1.33%</td><td class="num">2.2353</td><td class="num up">9.20%</td><td>2026-06-01</td><td>n.tinyright quote and T-1 valuation</td></tr>
-<tr><td class="date-cell" rowspan="3">2026-06-01</td><td class="mono">513100</td><td>纳指ETF国泰</td><td class="num">2.365</td><td class="num up">4.05%</td><td class="num">2.0767</td><td class="num up">13.88%</td><td>2026-06-01</td><td>existing historical quote; user-provided T-1 valuation</td></tr>
-<tr><td class="mono">159501</td><td>纳指ETF嘉实</td><td class="num">2.200</td><td class="num up">3.68%</td><td class="num">1.9494</td><td class="num up">12.86%</td><td>2026-06-01</td><td>existing historical quote; user-provided T-1 valuation</td></tr>
-<tr><td class="mono">159659</td><td>纳斯达克100ETF招商</td><td class="num">2.474</td><td class="num up">3.86%</td><td class="num">2.2353</td><td class="num up">10.68%</td><td>2026-06-01</td><td>existing historical quote; n.tinyright T-1 valuation</td></tr>
-        </tbody>
-      </table>
+    <p id="data-error" class="data-error" hidden></p>
+    <nav class="tabs" role="tablist" aria-label="数据表格">
+      <button class="tab-button" id="tab-etfs" type="button" role="tab" aria-selected="true" aria-controls="panel-etfs" data-tab-target="etfs">ETF每日记录</button>
+      <button class="tab-button" id="tab-benchmarks" type="button" role="tab" aria-selected="false" aria-controls="panel-benchmarks" data-tab-target="benchmarks">QQQ/NDX每日记录</button>
+      <button class="tab-button" id="tab-sources" type="button" role="tab" aria-selected="false" aria-controls="panel-sources" data-tab-target="sources">数据源</button>
+    </nav>
+    <section class="tab-panel" id="panel-etfs" role="tabpanel" aria-labelledby="tab-etfs">
+      <section class="section-block" aria-label="A股纳指 ETF 溢价记录">
+        <div class="drawdown-grid" id="etf-drawdown-summary"></div>
+        <div class="table-wrap">
+          <table id="etf-table">
+            <thead><tr><th>交易日期</th><th>代码</th><th>名称</th><th>当前价格</th><th>当天涨幅</th><th>T-1估值</th><th>溢价率</th><th>T-1估值日</th><th>数据源</th></tr></thead>
+            <tbody id="etf-records-body"><tr class="empty"><td colspan="9">暂无记录</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <p class="note">ETF 溢价率 = 当前价格 / T-1 估值 - 1。相同交易日期和代码重复运行时更新原行。</p>
     </section>
-    <p class="note">溢价率 = 当前价格 / T-1 估值 - 1。相同交易日期和代码重复运行时更新原行。</p>
+    <section class="tab-panel" id="panel-benchmarks" role="tabpanel" aria-labelledby="tab-benchmarks" hidden>
+      <section class="section-block" aria-label="QQQ / NDX 回撤记录">
+        <div class="drawdown-grid" id="benchmark-drawdown-summary"></div>
+        <div class="table-wrap">
+          <table id="benchmark-table">
+            <thead><tr><th>跟踪日期</th><th>标的</th><th>名称</th><th>当前点位/价格</th><th>当天涨幅</th><th>行情日期</th><th>数据源</th></tr></thead>
+            <tbody id="benchmark-records-body"><tr class="empty"><td colspan="7">暂无记录</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <p class="note">QQQ/NDX 摘要中的历史最高点按 Yahoo Finance 日线 close 统计；回撤 = 当前点位或价格 / 历史最高收盘点或价 - 1。</p>
+    </section>
+    <section class="tab-panel" id="panel-sources" role="tabpanel" aria-labelledby="tab-sources" hidden>
+      <section class="section-block" aria-label="数据源">
+        <div class="table-wrap compact">
+          <table id="source-table">
+            <thead><tr><th>数据源</th><th>用途</th><th>接口</th></tr></thead>
+            <tbody id="sources-body"><tr class="empty"><td colspan="3">暂无数据源</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
   </main>
-  <script id="records-data" type="application/json">[
-  {
-    "trade_date": "2026-06-05",
-    "recorded_at": "2026-06-05 15:18:47",
-    "code": "513100",
-    "name": "纳指ETF国泰",
-    "price": 2.205,
-    "daily_change": -0.015600000000000001,
-    "estimate": 2.0703,
-    "premium": 0.06509999999999999,
-    "quote_time": "2026-06-05 15:18:48",
-    "estimate_time": "2026-06-04",
-    "source": "Eastmoney quote; n.tinyright T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-05",
-    "recorded_at": "2026-06-05 15:18:47",
-    "code": "159501",
-    "name": "纳指ETF嘉实",
-    "price": 2.087,
-    "daily_change": -0.0095,
-    "estimate": 1.9434,
-    "premium": 0.0739,
-    "quote_time": "2026-06-05 15:18:30",
-    "estimate_time": "2026-06-04",
-    "source": "Eastmoney quote; n.tinyright T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-05",
-    "recorded_at": "2026-06-05 15:18:47",
-    "code": "159659",
-    "name": "纳斯达克100ETF招商",
-    "price": 2.322,
-    "daily_change": -0.013600000000000001,
-    "estimate": 2.2286,
-    "premium": 0.04190000000000001,
-    "quote_time": "2026-06-05 15:18:48",
-    "estimate_time": "2026-06-04",
-    "source": "Eastmoney quote; n.tinyright T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-04",
-    "recorded_at": "2026-06-04 16:28:04",
-    "code": "513100",
-    "name": "纳指ETF国泰",
-    "price": 2.24,
-    "daily_change": -0.025699999999999997,
-    "estimate": 2.0808,
-    "premium": 0.0765,
-    "quote_time": "2026-06-04 16:12:02",
-    "estimate_time": "2026-06-03",
-    "source": "Eastmoney quote; n.tinyright T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-04",
-    "recorded_at": "2026-06-04 16:28:04",
-    "code": "159501",
-    "name": "纳指ETF嘉实",
-    "price": 2.107,
-    "daily_change": -0.021400000000000002,
-    "estimate": 1.9533,
-    "premium": 0.0787,
-    "quote_time": "2026-06-04 15:34:09",
-    "estimate_time": "2026-06-03",
-    "source": "Eastmoney quote; n.tinyright T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-04",
-    "recorded_at": "2026-06-04 16:28:04",
-    "code": "159659",
-    "name": "纳斯达克100ETF招商",
-    "price": 2.354,
-    "daily_change": -0.0216,
-    "estimate": 2.24,
-    "premium": 0.0509,
-    "quote_time": "2026-06-04 15:34:30",
-    "estimate_time": "2026-06-03",
-    "source": "Eastmoney quote; n.tinyright T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-03",
-    "recorded_at": "2026-06-03 16:05:49",
-    "code": "513100",
-    "name": "纳指ETF国泰",
-    "price": 2.299,
-    "daily_change": -0.018799999999999997,
-    "estimate": 2.087,
-    "premium": 0.1016,
-    "quote_time": "2026-06-03 16:05:41",
-    "estimate_time": "2026-06-02",
-    "source": "Eastmoney quote; n.tinyright T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-03",
-    "recorded_at": "2026-06-03 16:05:49",
-    "code": "159501",
-    "name": "纳指ETF嘉实",
-    "price": 2.153,
-    "daily_change": -0.0146,
-    "estimate": 1.9591,
-    "premium": 0.0989,
-    "quote_time": "2026-06-03 15:34:00",
-    "estimate_time": "2026-06-02",
-    "source": "Eastmoney quote; n.tinyright T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-03",
-    "recorded_at": "2026-06-03 16:05:49",
-    "code": "159659",
-    "name": "纳斯达克100ETF招商",
-    "price": 2.406,
-    "daily_change": -0.0143,
-    "estimate": 2.2466,
-    "premium": 0.0709,
-    "quote_time": "2026-06-03 15:34:30",
-    "estimate_time": "2026-06-02",
-    "source": "Eastmoney quote; n.tinyright T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-02",
-    "recorded_at": "2026-06-02 16:53:08",
-    "code": "513100",
-    "name": "国泰纳指100",
-    "price": 2.343,
-    "daily_change": -0.009300000000000001,
-    "estimate": 2.0766,
-    "premium": 0.1283,
-    "quote_time": "2026-06-02 14:59:00",
-    "estimate_time": "2026-06-01",
-    "source": "n.tinyright quote and T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-02",
-    "recorded_at": "2026-06-02 16:53:08",
-    "code": "159501",
-    "name": "嘉实纳指100",
-    "price": 2.185,
-    "daily_change": -0.0068000000000000005,
-    "estimate": 1.9494,
-    "premium": 0.1209,
-    "quote_time": "2026-06-02 14:59:00",
-    "estimate_time": "2026-06-01",
-    "source": "n.tinyright quote and T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-02",
-    "recorded_at": "2026-06-02 16:53:08",
-    "code": "159659",
-    "name": "招商纳指100",
-    "price": 2.441,
-    "daily_change": -0.013300000000000001,
-    "estimate": 2.2353,
-    "premium": 0.092,
-    "quote_time": "2026-06-02 14:59:00",
-    "estimate_time": "2026-06-01",
-    "source": "n.tinyright quote and T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-01",
-    "recorded_at": "2026-06-02 17:11:05",
-    "code": "513100",
-    "name": "纳指ETF国泰",
-    "price": 2.365,
-    "daily_change": 0.0405,
-    "estimate": 2.0767,
-    "premium": 0.13882602205422057,
-    "quote_time": "2026-06-01 15:00:00",
-    "estimate_time": "2026-06-01",
-    "source": "existing historical quote; user-provided T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-01",
-    "recorded_at": "2026-06-02 17:11:05",
-    "code": "159501",
-    "name": "纳指ETF嘉实",
-    "price": 2.2,
-    "daily_change": 0.0368,
-    "estimate": 1.9494,
-    "premium": 0.12855237508977124,
-    "quote_time": "2026-06-01 15:00:00",
-    "estimate_time": "2026-06-01",
-    "source": "existing historical quote; user-provided T-1 valuation"
-  },
-  {
-    "trade_date": "2026-06-01",
-    "recorded_at": "2026-06-02 16:55:21",
-    "code": "159659",
-    "name": "纳斯达克100ETF招商",
-    "price": 2.474,
-    "daily_change": 0.038599999999999995,
-    "estimate": 2.2353427658335216,
-    "premium": 0.1067653864160234,
-    "quote_time": "2026-06-01 15:00:00",
-    "estimate_time": "2026-06-01",
-    "source": "existing historical quote; n.tinyright T-1 valuation"
-  }
-]</script>
+  <script src="nasdaq_etf_daily_data.js"></script>
+  <script>
+    (() => {
+      const data = window.NASDAQ_TRACKING_DATA;
+      const errorNode = document.getElementById("data-error");
+      const tabButtons = [...document.querySelectorAll("[data-tab-target]")];
+      const tabPanels = new Map(
+        [...document.querySelectorAll(".tab-panel")].map((panel) => [
+          panel.id.replace("panel-", ""),
+          panel,
+        ])
+      );
+      const activateTab = (target, updateHash = true) => {
+        const activeTarget = tabPanels.has(target) ? target : "etfs";
+        tabButtons.forEach((button) => {
+          const selected = button.dataset.tabTarget === activeTarget;
+          button.setAttribute("aria-selected", String(selected));
+          button.tabIndex = selected ? 0 : -1;
+        });
+        tabPanels.forEach((panel, panelTarget) => {
+          panel.hidden = panelTarget !== activeTarget;
+        });
+        if (updateHash) {
+          history.replaceState(null, "", `#${activeTarget}`);
+        }
+      };
+      tabButtons.forEach((button) => {
+        button.addEventListener("click", () => activateTab(button.dataset.tabTarget));
+        button.addEventListener("keydown", (event) => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+          event.preventDefault();
+          const currentIndex = tabButtons.indexOf(button);
+          const nextIndex = event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? tabButtons.length - 1
+              : event.key === "ArrowRight"
+                ? (currentIndex + 1) % tabButtons.length
+                : (currentIndex - 1 + tabButtons.length) % tabButtons.length;
+          tabButtons[nextIndex].focus();
+          activateTab(tabButtons[nextIndex].dataset.tabTarget);
+        });
+      });
+      activateTab(location.hash.slice(1) || "etfs", false);
+      const setText = (id, value) => {
+        const node = document.getElementById(id);
+        if (node) {
+          node.textContent = value ?? "-";
+        }
+      };
+      const escapeHtml = (value) => String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+      const pctClass = (value) => value > 0 ? "up" : value < 0 ? "down" : "flat";
+      const fmtNumber = (value, digits) => Number(value).toFixed(digits);
+      const fmtPct = (value) => `${(Number(value) * 100).toFixed(2)}%`;
+      const cell = (value, className = "") => `<td${className ? ` class="${className}"` : ""}>${escapeHtml(value)}</td>`;
+      const summaryRow = (label, value, className = "") => (
+        `<div class="drawdown-row"><span>${escapeHtml(label)}</span><strong${className ? ` class="${className}"` : ""}>${escapeHtml(value)}</strong></div>`
+      );
+      const summaryItem = (title, code, rows) => [
+        '<div class="drawdown-item">',
+        '<div class="drawdown-title">',
+        `<span>${escapeHtml(title)}</span>`,
+        `<span class="drawdown-code">${escapeHtml(code)}</span>`,
+        '</div>',
+        rows.join(""),
+        '</div>',
+      ].join("");
+      const sourceMap = new Map((data?.sources || []).map((item) => [item.id, item]));
+      const sourceNames = (ids) => (ids || [])
+        .map((id) => sourceMap.get(id)?.name || id)
+        .join("；");
+      const orderMap = (items, key) => new Map((items || []).map((item, index) => [item[key], index]));
+      const sortRows = (rows, dateKey, codeKey, order) => [...(rows || [])].sort((left, right) => {
+        const dateCompare = String(right[dateKey] || "").localeCompare(String(left[dateKey] || ""));
+        if (dateCompare !== 0) return dateCompare;
+        return (order.get(left[codeKey]) ?? 99) - (order.get(right[codeKey]) ?? 99);
+      });
+      const groupedRows = (records, dateKey, colspan, renderCells) => {
+        if (!records.length) {
+          return `<tr class="empty"><td colspan="${colspan}">暂无记录</td></tr>`;
+        }
+        let html = "";
+        let index = 0;
+        while (index < records.length) {
+          const date = records[index][dateKey];
+          const group = records.filter((item) => item[dateKey] === date);
+          group.forEach((row, groupIndex) => {
+            html += "<tr>";
+            if (groupIndex === 0) {
+              html += `<td class="date-cell" rowspan="${group.length}">${escapeHtml(date)}</td>`;
+            }
+            html += renderCells(row);
+            html += "</tr>";
+          });
+          index += group.length;
+        }
+        return html;
+      };
+      const latestRows = (records, dateKey, codeKey, order) => {
+        const latestDate = [...new Set((records || []).map((row) => row[dateKey]).filter(Boolean))]
+          .sort()
+          .at(-1);
+        if (!latestDate) return [];
+        return sortRows(records.filter((row) => row[dateKey] === latestDate), dateKey, codeKey, order);
+      };
+      const renderEtfDrawdownSummary = (records) => {
+        const latest = latestRows(records, "trade_date", "code", etfOrder);
+        const html = latest.map((row) => {
+          const sameCode = records.filter((item) => item.code === row.code);
+          const highRow = sameCode.reduce((best, item) => (
+            Number(item.price) > Number(best.price) ? item : best
+          ), sameCode[0]);
+          const drawdown = Number(row.price) / Number(highRow.price) - 1;
+          return summaryItem(row.name, row.code, [
+            summaryRow("历史最高记录价", `${fmtNumber(highRow.price, 3)} / ${highRow.trade_date}`),
+            summaryRow("当天更新价", `${fmtNumber(row.price, 3)} / ${row.trade_date}`),
+            summaryRow("回撤", fmtPct(drawdown), pctClass(drawdown)),
+          ]);
+        }).join("");
+        document.getElementById("etf-drawdown-summary").innerHTML = html || '<div class="drawdown-item">暂无回撤数据</div>';
+      };
+      const renderBenchmarkDrawdownSummary = (records) => {
+        const latest = latestRows(records, "track_date", "symbol", benchmarkOrder);
+        const html = latest.map((row) => summaryItem(row.name, row.symbol, [
+          summaryRow("历史最高收盘", `${fmtNumber(row.history_high, 2)} / ${row.history_high_date}`),
+          summaryRow("当天更新点", `${fmtNumber(row.value, 2)} / ${row.quote_date}`),
+          summaryRow("回撤", fmtPct(row.drawdown), pctClass(Number(row.drawdown))),
+        ])).join("");
+        document.getElementById("benchmark-drawdown-summary").innerHTML = html || '<div class="drawdown-item">暂无回撤数据</div>';
+      };
+
+      if (!data) {
+        errorNode.hidden = false;
+        errorNode.textContent = "未加载到 nasdaq_etf_daily_data.js，请确认该文件和 HTML 在同一目录。";
+        return;
+      }
+
+      const etfOrder = orderMap(data.etfs, "code");
+      const benchmarkOrder = orderMap(data.benchmarks, "symbol");
+      const etfRecords = sortRows(data.etf_records, "trade_date", "code", etfOrder);
+      const benchmarkRecords = sortRows(data.benchmark_records, "track_date", "symbol", benchmarkOrder);
+      const dates = [...new Set([
+        ...etfRecords.map((row) => row.trade_date),
+        ...benchmarkRecords.map((row) => row.track_date),
+      ].filter(Boolean))];
+      const updatedAt = [...etfRecords, ...benchmarkRecords]
+        .map((row) => row.recorded_at || "")
+        .sort()
+        .at(-1) || "-";
+
+      setText("latest-date", dates.sort().at(-1) || "-");
+      setText("updated-at", updatedAt);
+      renderEtfDrawdownSummary(etfRecords);
+      renderBenchmarkDrawdownSummary(benchmarkRecords);
+
+      document.getElementById("etf-records-body").innerHTML = groupedRows(
+        etfRecords,
+        "trade_date",
+        9,
+        (row) => [
+          cell(row.code, "mono"),
+          cell(row.name),
+          cell(fmtNumber(row.price, 3), "num"),
+          cell(fmtPct(row.daily_change), `num ${pctClass(Number(row.daily_change))}`),
+          cell(fmtNumber(row.estimate, 4), "num"),
+          cell(fmtPct(row.premium), `num ${pctClass(Number(row.premium))}`),
+          cell(row.estimate_time),
+          cell(sourceNames(row.source_ids)),
+        ].join("")
+      );
+
+      document.getElementById("benchmark-records-body").innerHTML = groupedRows(
+        benchmarkRecords,
+        "track_date",
+        7,
+        (row) => [
+          cell(row.symbol, "mono"),
+          cell(row.name),
+          cell(fmtNumber(row.value, 2), "num"),
+          cell(fmtPct(row.daily_change), `num ${pctClass(Number(row.daily_change))}`),
+          cell(row.quote_date),
+          cell(sourceNames(row.source_ids)),
+        ].join("")
+      );
+
+      document.getElementById("sources-body").innerHTML = (data.sources || []).length
+        ? data.sources.map((source) => [
+          "<tr>",
+          cell(source.name),
+          cell(source.purpose),
+          cell(source.url_template || source.url || "-", "source-url"),
+          "</tr>",
+        ].join("")).join("")
+        : '<tr class="empty"><td colspan="3">暂无数据源</td></tr>';
+    })();
+  </script>
 </body>
 </html>
