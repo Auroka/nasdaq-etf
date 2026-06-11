@@ -88,7 +88,7 @@ python record_nasdaq_etf.py --refresh-benchmarks
 输出文件：
 
 ```text
-nasdaq_etf_daily_record.html
+index.html
 nasdaq_etf_daily_data.js
 ```
 

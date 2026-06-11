@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 
 
 APP_DIR = Path(__file__).resolve().parent
-DEFAULT_OUTPUT = APP_DIR / "nasdaq_etf_daily_record.html"
+DEFAULT_OUTPUT = APP_DIR / "index.html"
 DEFAULT_DATA_OUTPUT = APP_DIR / "nasdaq_etf_daily_data.js"
 DEFAULT_SOURCE_CONFIG = APP_DIR / "data_sources.json"
 TZ = dt.timezone(dt.timedelta(hours=8), "Asia/Shanghai")
