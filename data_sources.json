@@ -19,6 +19,12 @@
       "url": "https://n.tinyright.com/"
     },
     {
+      "id": "tinyright_iopv",
+      "name": "估值日记 IOPV 估值",
+      "purpose": "补录缺失日期时，用估值日匹配的 IOPV 估值对齐历史日期",
+      "url": "https://n.tinyright.com/"
+    },
+    {
       "id": "tinyright_table",
       "name": "估值日记表格行情",
       "purpose": "东方财富不可用时的 A股纳指 ETF 价格和涨幅兜底",

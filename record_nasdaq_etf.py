@@ -93,6 +93,7 @@ def fetch_text(url: str) -> str:
         headers={
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
+            "Referer": "https://quote.eastmoney.com/",
         },
     )
     last_error: Exception | None = None
@@ -293,6 +294,23 @@ def parse_tinyright_t1(config: dict, codes: tuple[str, ...]) -> dict[str, dict]:
     raise RuntimeError(f"failed to parse n.tinyright t1 data: {last_error}")
 
 
+def parse_tinyright_iopv(config: dict, codes: tuple[str, ...]) -> dict[str, dict]:
+    raw = fetch_text(source_url(config, "tinyright_iopv"))
+    candidates = []
+    for value in (raw, html.unescape(raw)):
+        candidates.append(value)
+        candidates.append(value.replace('\\"', '"'))
+
+    last_error: Exception | None = None
+    for value in candidates:
+        try:
+            rows = extract_json_array(value, "iopvData")
+            return {row["code"]: row for row in rows if row.get("code") in codes}
+        except (ValueError, json.JSONDecodeError) as exc:
+            last_error = exc
+    raise RuntimeError(f"failed to parse n.tinyright iopv data: {last_error}")
+
+
 def parse_eastmoney(config: dict, codes: tuple[str, ...]) -> dict[str, dict]:
     secids = ",".join(secid_for_code(code) for code in codes)
     data = json.loads(fetch_text(source_url(config, "eastmoney_quote", secids=secids)))
@@ -434,19 +452,44 @@ def build_etf_rows(config: dict, now: dt.datetime) -> list[dict]:
     return rows
 
 
-def build_backfill_etf_rows(config: dict, trade_date: dt.date, now: dt.datetime) -> list[dict]:
+def build_backfill_etf_rows(
+    config: dict,
+    trade_date: dt.date,
+    now: dt.datetime,
+    valuation_target_date: dt.date | None = None,
+) -> list[dict]:
     codes = etf_codes(config)
     t1_data = parse_tinyright_t1(config, codes)
+    iopv_data = parse_tinyright_iopv(config, codes)
     rows = []
 
     for code in codes:
         quote_row = parse_eastmoney_kline(config, code, trade_date)
+        source_ids = ["eastmoney_kline", "tinyright_t1"]
         valuation = t1_data.get(code)
-        if not valuation:
-            raise RuntimeError(f"{code} has no T-1 valuation")
+        if valuation:
+            valuation_date = dt.date.fromisoformat(valuation["t1_date"])
+            estimate = float(valuation["t1"])
+        else:
+            valuation_date = None
+            estimate = None
 
-        valuation_date = dt.date.fromisoformat(valuation["t1_date"])
-        estimate = float(valuation["t1"])
+        if valuation_target_date and valuation_date != valuation_target_date:
+            iopv = iopv_data.get(code)
+            iopv_date = dt.date.fromisoformat(iopv["date"]) if iopv else None
+            if iopv and iopv_date == valuation_target_date:
+                valuation_date = iopv_date
+                estimate = float(iopv["iopv"])
+                source_ids = ["eastmoney_kline", "tinyright_iopv"]
+            else:
+                raise RuntimeError(
+                    f"{code} valuation date mismatch: expected {valuation_target_date}, "
+                    f"got T-1 {valuation_date} and IOPV {iopv_date}"
+                )
+
+        if valuation_date is None or estimate is None:
+            raise RuntimeError(f"{code} has no valuation")
+
         price = quote_row["close"]
         rows.append(
             {
@@ -460,7 +503,7 @@ def build_backfill_etf_rows(config: dict, trade_date: dt.date, now: dt.datetime)
                 "premium": price / estimate - 1,
                 "quote_time": f"{trade_date.isoformat()} 15:00:00",
                 "estimate_time": valuation_date.isoformat(),
-                "source_ids": ["eastmoney_kline", "tinyright_t1"],
+                "source_ids": source_ids,
                 "quote_date": trade_date,
                 "estimate_date": valuation_date,
             }
@@ -1200,8 +1243,12 @@ def build_backfill_rows(
     trade_date: dt.date,
     now: dt.datetime,
 ) -> tuple[list[dict], list[dict]]:
-    etf_rows = build_backfill_etf_rows(config, trade_date, now)
-    benchmark_rows = build_benchmark_rows(config, trade_date, now, target_date=trade_date)
+    benchmark_rows = build_benchmark_rows(config, trade_date, now, target_date=trade_date - dt.timedelta(days=1))
+    quote_date = benchmark_rows[0]["quote_date"] if benchmark_rows else None
+    valuation_target_date = (
+        quote_date if isinstance(quote_date, dt.date) else dt.date.fromisoformat(quote_date)
+    ) if quote_date else None
+    etf_rows = build_backfill_etf_rows(config, trade_date, now, valuation_target_date)
     return etf_rows, benchmark_rows
 
 

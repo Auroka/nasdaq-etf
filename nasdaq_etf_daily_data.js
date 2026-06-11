@@ -1,5 +1,5 @@
 window.NASDAQ_TRACKING_DATA = {
-  "generated_at": "2026-06-08 16:28:42",
+  "generated_at": "2026-06-11 14:04:30",
   "etfs": [
     {
       "code": "513100",
@@ -48,6 +48,12 @@ window.NASDAQ_TRACKING_DATA = {
       "url": "https://n.tinyright.com/"
     },
     {
+      "id": "tinyright_iopv",
+      "name": "估值日记 IOPV 估值",
+      "purpose": "补录缺失日期时，用估值日匹配的 IOPV 估值对齐历史日期",
+      "url": "https://n.tinyright.com/"
+    },
+    {
       "id": "tinyright_table",
       "name": "估值日记表格行情",
       "purpose": "东方财富不可用时的 A股纳指 ETF 价格和涨幅兜底",
@@ -73,6 +79,102 @@ window.NASDAQ_TRACKING_DATA = {
     }
   ],
   "etf_records": [
+    {
+      "trade_date": "2026-06-10",
+      "recorded_at": "2026-06-11 14:04:28",
+      "code": "513100",
+      "name": "纳指ETF国泰",
+      "price": 2.143,
+      "daily_change": -0.0259,
+      "estimate": 1.979,
+      "premium": 0.08287013643254149,
+      "quote_time": "2026-06-10 15:00:00",
+      "estimate_time": "2026-06-09",
+      "source_ids": [
+        "eastmoney_kline",
+        "tinyright_iopv"
+      ]
+    },
+    {
+      "trade_date": "2026-06-10",
+      "recorded_at": "2026-06-11 14:04:28",
+      "code": "159501",
+      "name": "纳指ETF嘉实",
+      "price": 2.019,
+      "daily_change": -0.0289,
+      "estimate": 1.8578,
+      "premium": 0.08676929701797831,
+      "quote_time": "2026-06-10 15:00:00",
+      "estimate_time": "2026-06-09",
+      "source_ids": [
+        "eastmoney_kline",
+        "tinyright_iopv"
+      ]
+    },
+    {
+      "trade_date": "2026-06-10",
+      "recorded_at": "2026-06-11 14:04:28",
+      "code": "159659",
+      "name": "纳斯达克100ETF招商",
+      "price": 2.257,
+      "daily_change": -0.0255,
+      "estimate": 2.1305,
+      "premium": 0.0593757333959164,
+      "quote_time": "2026-06-10 15:00:00",
+      "estimate_time": "2026-06-09",
+      "source_ids": [
+        "eastmoney_kline",
+        "tinyright_iopv"
+      ]
+    },
+    {
+      "trade_date": "2026-06-09",
+      "recorded_at": "2026-06-09 15:18:27",
+      "code": "513100",
+      "name": "纳指ETF国泰",
+      "price": 2.2,
+      "daily_change": 0.0407,
+      "estimate": 2.0033,
+      "premium": 0.09820000000000001,
+      "quote_time": "2026-06-09 15:18:29",
+      "estimate_time": "2026-06-08",
+      "source_ids": [
+        "eastmoney_quote",
+        "tinyright_t1"
+      ]
+    },
+    {
+      "trade_date": "2026-06-09",
+      "recorded_at": "2026-06-09 15:18:27",
+      "code": "159501",
+      "name": "纳指ETF嘉实",
+      "price": 2.079,
+      "daily_change": 0.0313,
+      "estimate": 1.8805,
+      "premium": 0.1056,
+      "quote_time": "2026-06-09 15:17:42",
+      "estimate_time": "2026-06-08",
+      "source_ids": [
+        "eastmoney_quote",
+        "tinyright_t1"
+      ]
+    },
+    {
+      "trade_date": "2026-06-09",
+      "recorded_at": "2026-06-09 15:18:27",
+      "code": "159659",
+      "name": "纳斯达克100ETF招商",
+      "price": 2.316,
+      "daily_change": 0.037200000000000004,
+      "estimate": 2.1564,
+      "premium": 0.07400000000000001,
+      "quote_time": "2026-06-09 15:17:57",
+      "estimate_time": "2026-06-08",
+      "source_ids": [
+        "eastmoney_quote",
+        "tinyright_t1"
+      ]
+    },
     {
       "trade_date": "2026-06-08",
       "recorded_at": "2026-06-08 15:21:17",
@@ -363,6 +465,70 @@ window.NASDAQ_TRACKING_DATA = {
     }
   ],
   "benchmark_records": [
+    {
+      "track_date": "2026-06-10",
+      "recorded_at": "2026-06-11 14:04:28",
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "value": 707.8300170898438,
+      "daily_change": -0.011507241121808565,
+      "history_high": 746.1599731445312,
+      "drawdown": -0.051369622378903745,
+      "history_high_date": "2026-06-02",
+      "quote_date": "2026-06-09",
+      "unit": "USD",
+      "source_ids": [
+        "yahoo_chart"
+      ]
+    },
+    {
+      "track_date": "2026-06-10",
+      "recorded_at": "2026-06-11 14:04:28",
+      "symbol": "NDX",
+      "name": "Nasdaq 100 Index",
+      "value": 29084.5,
+      "daily_change": -0.011210880989443561,
+      "history_high": 30660.599609375,
+      "drawdown": -0.05140472232947069,
+      "history_high_date": "2026-06-02",
+      "quote_date": "2026-06-09",
+      "unit": "points",
+      "source_ids": [
+        "yahoo_chart"
+      ]
+    },
+    {
+      "track_date": "2026-06-09",
+      "recorded_at": "2026-06-09 15:18:27",
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "value": 716.0700073242188,
+      "daily_change": 0.015615706186351996,
+      "history_high": 746.1599731445312,
+      "drawdown": -0.040326427178215885,
+      "history_high_date": "2026-06-02",
+      "quote_date": "2026-06-08",
+      "unit": "USD",
+      "source_ids": [
+        "yahoo_chart"
+      ]
+    },
+    {
+      "track_date": "2026-06-09",
+      "recorded_at": "2026-06-09 15:18:27",
+      "symbol": "NDX",
+      "name": "Nasdaq 100 Index",
+      "value": 29414.259765625,
+      "daily_change": 0.01576995891959765,
+      "history_high": 30660.599609375,
+      "drawdown": -0.04064955870494169,
+      "history_high_date": "2026-06-02",
+      "quote_date": "2026-06-08",
+      "unit": "points",
+      "source_ids": [
+        "yahoo_chart"
+      ]
+    },
     {
       "track_date": "2026-06-08",
       "recorded_at": "2026-06-08 15:32:28",
