@@ -33,8 +33,14 @@
     {
       "id": "yahoo_chart",
       "name": "Yahoo Finance 日线行情",
-      "purpose": "QQQ 和 NDX 当前点位、当天涨幅、历史最高收盘点/价和回撤",
+      "purpose": "Nasdaq 官方 API 不可用时，作为 QQQ 和 NDX 日线行情备用源",
       "url_template": "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=30y&interval=1d&includePrePost=false&events=history"
+    },
+    {
+      "id": "nasdaq_api_historical",
+      "name": "Nasdaq 官方历史行情",
+      "purpose": "默认获取 QQQ 和 NDX 的目标日收盘价、当天涨幅、历史最高收盘点/价和回撤",
+      "url_template": "https://api.nasdaq.com/api/quote/{symbol}/historical?assetclass={assetclass}&fromdate={fromdate}&todate={todate}&limit=30"
     },
     {
       "id": "manual_historical_quote",
@@ -68,12 +74,16 @@
       "symbol": "QQQ",
       "name": "Invesco QQQ Trust",
       "yahoo_symbol": "QQQ",
+      "nasdaq_symbol": "QQQ",
+      "nasdaq_assetclass": "etf",
       "unit": "USD"
     },
     {
       "symbol": "NDX",
       "name": "Nasdaq 100 Index",
       "yahoo_symbol": "^NDX",
+      "nasdaq_symbol": "NDX",
+      "nasdaq_assetclass": "index",
       "unit": "points"
     }
   ]

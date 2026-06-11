@@ -88,13 +88,22 @@ def source_url(config: dict, source_id: str, **kwargs: str) -> str:
 
 
 def fetch_text(url: str) -> str:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
+        "Referer": "https://quote.eastmoney.com/",
+    }
+    if "api.nasdaq.com" in url:
+        headers.update(
+            {
+                "Accept": "application/json, text/plain, */*",
+                "Origin": "https://www.nasdaq.com",
+                "Referer": "https://www.nasdaq.com/",
+            }
+        )
     req = Request(
         url,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
-            "Referer": "https://quote.eastmoney.com/",
-        },
+        headers=headers,
     )
     last_error: Exception | None = None
     for attempt in range(3):
@@ -149,7 +158,7 @@ def clean_cell(fragment: str) -> str:
 
 
 def parse_number_text(value: str) -> float | None:
-    value = value.replace(",", "").replace("%", "").strip()
+    value = value.replace(",", "").replace("%", "").replace("$", "").strip()
     if not value or value == "-":
         return None
     try:
@@ -342,36 +351,112 @@ def yahoo_date(timestamp: int) -> dt.date:
     return dt.datetime.fromtimestamp(timestamp, dt.timezone.utc).date()
 
 
-def parse_yahoo_history(config: dict, item: dict, target_date: dt.date | None = None) -> dict:
-    symbol = item["yahoo_symbol"]
-    url = source_url(config, "yahoo_chart", symbol=quote(symbol, safe=""))
+def parse_nasdaq_date(value: str) -> dt.date:
+    return dt.datetime.strptime(value, "%m/%d/%Y").date()
+
+
+def parse_nasdaq_history(
+    config: dict,
+    item: dict,
+    target_date: dt.date,
+    lookback_days: int = 14,
+) -> list[dict]:
+    symbol = item.get("nasdaq_symbol") or item["symbol"]
+    assetclass = item.get("nasdaq_assetclass") or "index"
+    fromdate = (target_date - dt.timedelta(days=lookback_days)).isoformat()
+    url = source_url(
+        config,
+        "nasdaq_api_historical",
+        symbol=quote(symbol, safe=""),
+        assetclass=assetclass,
+        fromdate=fromdate,
+        todate=target_date.isoformat(),
+    )
     data = json.loads(fetch_text(url))
-    chart = data.get("chart", {})
-    if chart.get("error"):
-        raise RuntimeError(f"{symbol} yahoo chart error: {chart['error']}")
+    status = data.get("status", {})
+    if status.get("rCode") != 200:
+        raise RuntimeError(f"{symbol} Nasdaq historical API error: {status}")
 
-    result = (chart.get("result") or [None])[0]
-    if not result:
-        raise RuntimeError(f"{symbol} yahoo chart has no result")
-
-    timestamps = result.get("timestamp") or []
-    quote_rows = (result.get("indicators", {}).get("quote") or [{}])[0]
-    closes = quote_rows.get("close") or []
+    table = (data.get("data") or {}).get("tradesTable") or {}
+    rows = table.get("rows") or []
     points = []
-    for index, ts in enumerate(timestamps):
-        close = as_float(closes[index] if index < len(closes) else None)
-        if close is None:
+    for row in rows:
+        date_text = row.get("date")
+        close = parse_number_text(str(row.get("close", "")))
+        if not date_text or close is None:
             continue
-        points.append({"date": yahoo_date(ts), "close": close})
+        date = parse_nasdaq_date(date_text)
+        if date <= target_date:
+            points.append(
+                {
+                    "date": date,
+                    "close": close,
+                    "source_id": "nasdaq_api_historical",
+                }
+            )
 
     if not points:
-        raise RuntimeError(f"{symbol} yahoo chart has no price points")
+        raise RuntimeError(f"{symbol} has no Nasdaq historical rows before {target_date}")
+    return sorted(points, key=lambda point: point["date"])
+
+
+def parse_benchmark_history(config: dict, item: dict, target_date: dt.date | None = None) -> dict:
+    symbol = item["yahoo_symbol"]
+    source_ids: set[str] = set()
+    points = []
+    if target_date:
+        try:
+            points = parse_nasdaq_history(config, item, target_date, lookback_days=11000)
+            source_ids = {"nasdaq_api_historical"}
+        except (RuntimeError, json.JSONDecodeError):
+            points = []
+
+    if not points:
+        url = source_url(config, "yahoo_chart", symbol=quote(symbol, safe=""))
+        source_ids = {"yahoo_chart"}
+        try:
+            data = json.loads(fetch_text(url))
+            chart = data.get("chart", {})
+            if chart.get("error"):
+                raise RuntimeError(f"{symbol} yahoo chart error: {chart['error']}")
+
+            result = (chart.get("result") or [None])[0]
+            if not result:
+                raise RuntimeError(f"{symbol} yahoo chart has no result")
+
+            timestamps = result.get("timestamp") or []
+            quote_rows = (result.get("indicators", {}).get("quote") or [{}])[0]
+            closes = quote_rows.get("close") or []
+            for index, ts in enumerate(timestamps):
+                close = as_float(closes[index] if index < len(closes) else None)
+                if close is None:
+                    continue
+                points.append({"date": yahoo_date(ts), "close": close, "source_id": "yahoo_chart"})
+
+            if not points:
+                raise RuntimeError(f"{symbol} yahoo chart has no price points")
+        except (RuntimeError, json.JSONDecodeError):
+            if not target_date:
+                raise
+            points = parse_nasdaq_history(config, item, target_date, lookback_days=11000)
+            source_ids = {"nasdaq_api_historical"}
+
+    if target_date and not any(point["date"] == target_date for point in points):
+        try:
+            nasdaq_points = parse_nasdaq_history(config, item, target_date)
+        except RuntimeError:
+            nasdaq_points = []
+        target_points = [point for point in nasdaq_points if point["date"] == target_date]
+        if target_points:
+            points.append(target_points[-1])
+            points = sorted(points, key=lambda point: point["date"])
+            source_ids.add("nasdaq_api_historical")
 
     selected_index = len(points) - 1
     if target_date:
         matching_indexes = [idx for idx, point in enumerate(points) if point["date"] <= target_date]
         if not matching_indexes:
-            raise RuntimeError(f"{symbol} has no yahoo history before {target_date}")
+            raise RuntimeError(f"{symbol} has no benchmark history before {target_date}")
         selected_index = matching_indexes[-1]
 
     selected = points[selected_index]
@@ -393,8 +478,12 @@ def parse_yahoo_history(config: dict, item: dict, target_date: dt.date | None = 
         "history_high_date": high_point["date"],
         "quote_date": selected["date"],
         "unit": item.get("unit", ""),
-        "source_ids": ["yahoo_chart"],
+        "source_ids": sorted(source_ids | {selected.get("source_id", "yahoo_chart")}),
     }
+
+
+def benchmark_target_date_for_track_date(track_date: dt.date) -> dt.date:
+    return track_date - dt.timedelta(days=1)
 
 
 def build_etf_rows(config: dict, now: dt.datetime) -> list[dict]:
@@ -520,7 +609,7 @@ def build_benchmark_rows(
 ) -> list[dict]:
     rows = []
     for item in config.get("benchmarks", []):
-        quote_row = parse_yahoo_history(config, item, target_date)
+        quote_row = parse_benchmark_history(config, item, target_date)
         rows.append(
             {
                 "track_date": track_date,
@@ -954,7 +1043,7 @@ def render_html(data_file_name: str) -> str:
           </table>
         </div>
       </section>
-      <p class="note">QQQ/NDX 摘要中的历史最高点按 Yahoo Finance 日线 close 统计；回撤 = 当前点位或价格 / 历史最高收盘点或价 - 1。</p>
+      <p class="note">QQQ/NDX 摘要默认按 Nasdaq 官方历史行情统计；Yahoo Finance 日线行情仅作为备用源。回撤 = 当前点位或价格 / 历史最高收盘点或价 - 1。</p>
     </section>
     <section class="tab-panel" id="panel-sources" role="tabpanel" aria-labelledby="tab-sources" hidden>
       <section class="section-block" aria-label="数据源">
@@ -1234,7 +1323,12 @@ def validate_timing(rows: list[dict], now: dt.datetime, force: bool) -> str | No
 
 def build_current_rows(config: dict, now: dt.datetime) -> tuple[list[dict], list[dict]]:
     etf_rows = build_etf_rows(config, now)
-    benchmark_rows = build_benchmark_rows(config, now.date(), now)
+    benchmark_rows = build_benchmark_rows(
+        config,
+        now.date(),
+        now,
+        target_date=benchmark_target_date_for_track_date(now.date()),
+    )
     return etf_rows, benchmark_rows
 
 
@@ -1243,7 +1337,12 @@ def build_backfill_rows(
     trade_date: dt.date,
     now: dt.datetime,
 ) -> tuple[list[dict], list[dict]]:
-    benchmark_rows = build_benchmark_rows(config, trade_date, now, target_date=trade_date - dt.timedelta(days=1))
+    benchmark_rows = build_benchmark_rows(
+        config,
+        trade_date,
+        now,
+        target_date=benchmark_target_date_for_track_date(trade_date),
+    )
     quote_date = benchmark_rows[0]["quote_date"] if benchmark_rows else None
     valuation_target_date = (
         quote_date if isinstance(quote_date, dt.date) else dt.date.fromisoformat(quote_date)
@@ -1263,12 +1362,12 @@ def build_benchmark_refresh_rows(
         item = benchmarks.get(record.get("symbol"))
         if not item:
             continue
-        target_date_text = record.get("quote_date") or record.get("track_date")
-        target_date = dt.date.fromisoformat(target_date_text)
-        quote_row = parse_yahoo_history(config, item, target_date)
+        track_date = dt.date.fromisoformat(record["track_date"])
+        target_date = benchmark_target_date_for_track_date(track_date)
+        quote_row = parse_benchmark_history(config, item, target_date)
         rows.append(
             {
-                "track_date": dt.date.fromisoformat(record["track_date"]),
+                "track_date": track_date,
                 "recorded_at": now.strftime("%Y-%m-%d %H:%M:%S"),
                 **quote_row,
             }

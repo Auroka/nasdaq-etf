@@ -1,5 +1,5 @@
 window.NASDAQ_TRACKING_DATA = {
-  "generated_at": "2026-06-11 15:16:15",
+  "generated_at": "2026-06-11 15:38:02",
   "etfs": [
     {
       "code": "513100",
@@ -19,12 +19,16 @@ window.NASDAQ_TRACKING_DATA = {
       "symbol": "QQQ",
       "name": "Invesco QQQ Trust",
       "yahoo_symbol": "QQQ",
+      "nasdaq_symbol": "QQQ",
+      "nasdaq_assetclass": "etf",
       "unit": "USD"
     },
     {
       "symbol": "NDX",
       "name": "Nasdaq 100 Index",
       "yahoo_symbol": "^NDX",
+      "nasdaq_symbol": "NDX",
+      "nasdaq_assetclass": "index",
       "unit": "points"
     }
   ],
@@ -62,8 +66,14 @@ window.NASDAQ_TRACKING_DATA = {
     {
       "id": "yahoo_chart",
       "name": "Yahoo Finance 日线行情",
-      "purpose": "QQQ 和 NDX 当前点位、当天涨幅、历史最高收盘点/价和回撤",
+      "purpose": "Nasdaq 官方 API 不可用时，作为 QQQ 和 NDX 日线行情备用源",
       "url_template": "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=30y&interval=1d&includePrePost=false&events=history"
+    },
+    {
+      "id": "nasdaq_api_historical",
+      "name": "Nasdaq 官方历史行情",
+      "purpose": "默认获取 QQQ 和 NDX 的目标日收盘价、当天涨幅、历史最高收盘点/价和回撤",
+      "url_template": "https://api.nasdaq.com/api/quote/{symbol}/historical?assetclass={assetclass}&fromdate={fromdate}&todate={todate}&limit=30"
     },
     {
       "id": "manual_historical_quote",
@@ -515,162 +525,162 @@ window.NASDAQ_TRACKING_DATA = {
   "benchmark_records": [
     {
       "track_date": "2026-06-11",
-      "recorded_at": "2026-06-11 15:16:10",
+      "recorded_at": "2026-06-11 15:37:52",
       "symbol": "QQQ",
       "name": "Invesco QQQ Trust",
-      "value": 707.8300170898438,
-      "daily_change": -0.011507241121808565,
-      "history_high": 746.1599731445312,
-      "drawdown": -0.051369622378903745,
+      "value": 693.69,
+      "daily_change": -0.019976548041196307,
+      "history_high": 746.16,
+      "drawdown": -0.0703200385976197,
       "history_high_date": "2026-06-02",
-      "quote_date": "2026-06-09",
+      "quote_date": "2026-06-10",
       "unit": "USD",
       "source_ids": [
-        "yahoo_chart"
+        "nasdaq_api_historical"
       ]
     },
     {
       "track_date": "2026-06-11",
-      "recorded_at": "2026-06-11 15:16:10",
+      "recorded_at": "2026-06-11 15:37:52",
       "symbol": "NDX",
       "name": "Nasdaq 100 Index",
-      "value": 29084.5,
-      "daily_change": -0.011210880989443561,
-      "history_high": 30660.599609375,
-      "drawdown": -0.05140472232947069,
+      "value": 28508.03,
+      "daily_change": -0.019820522958964415,
+      "history_high": 30660.6,
+      "drawdown": -0.07020638865514695,
       "history_high_date": "2026-06-02",
-      "quote_date": "2026-06-09",
+      "quote_date": "2026-06-10",
       "unit": "points",
       "source_ids": [
-        "yahoo_chart"
+        "nasdaq_api_historical"
       ]
     },
     {
       "track_date": "2026-06-10",
-      "recorded_at": "2026-06-11 14:04:28",
+      "recorded_at": "2026-06-11 15:37:52",
       "symbol": "QQQ",
       "name": "Invesco QQQ Trust",
-      "value": 707.8300170898438,
-      "daily_change": -0.011507241121808565,
-      "history_high": 746.1599731445312,
-      "drawdown": -0.051369622378903745,
+      "value": 707.83,
+      "daily_change": -0.01150725487731652,
+      "history_high": 746.16,
+      "drawdown": -0.05136967942532422,
       "history_high_date": "2026-06-02",
       "quote_date": "2026-06-09",
       "unit": "USD",
       "source_ids": [
-        "yahoo_chart"
+        "nasdaq_api_historical"
       ]
     },
     {
       "track_date": "2026-06-10",
-      "recorded_at": "2026-06-11 14:04:28",
+      "recorded_at": "2026-06-11 15:37:52",
       "symbol": "NDX",
       "name": "Nasdaq 100 Index",
       "value": 29084.5,
-      "daily_change": -0.011210880989443561,
-      "history_high": 30660.599609375,
-      "drawdown": -0.05140472232947069,
+      "daily_change": -0.011210888868188329,
+      "history_high": 30660.6,
+      "drawdown": -0.051404734414851605,
       "history_high_date": "2026-06-02",
       "quote_date": "2026-06-09",
       "unit": "points",
       "source_ids": [
-        "yahoo_chart"
+        "nasdaq_api_historical"
       ]
     },
     {
       "track_date": "2026-06-09",
-      "recorded_at": "2026-06-09 15:18:27",
+      "recorded_at": "2026-06-11 15:37:52",
       "symbol": "QQQ",
       "name": "Invesco QQQ Trust",
-      "value": 716.0700073242188,
-      "daily_change": 0.015615706186351996,
-      "history_high": 746.1599731445312,
-      "drawdown": -0.040326427178215885,
+      "value": 716.07,
+      "daily_change": 0.015615692281508053,
+      "history_high": 746.16,
+      "drawdown": -0.04032647153425528,
       "history_high_date": "2026-06-02",
       "quote_date": "2026-06-08",
       "unit": "USD",
       "source_ids": [
-        "yahoo_chart"
+        "nasdaq_api_historical"
       ]
     },
     {
       "track_date": "2026-06-09",
-      "recorded_at": "2026-06-09 15:18:27",
+      "recorded_at": "2026-06-11 15:37:52",
       "symbol": "NDX",
       "name": "Nasdaq 100 Index",
-      "value": 29414.259765625,
-      "daily_change": 0.01576995891959765,
-      "history_high": 30660.599609375,
-      "drawdown": -0.04064955870494169,
+      "value": 29414.26,
+      "daily_change": 0.015769953311047802,
+      "history_high": 30660.6,
+      "drawdown": -0.040649563283171264,
       "history_high_date": "2026-06-02",
       "quote_date": "2026-06-08",
       "unit": "points",
       "source_ids": [
-        "yahoo_chart"
+        "nasdaq_api_historical"
       ]
     },
     {
       "track_date": "2026-06-08",
-      "recorded_at": "2026-06-08 15:32:28",
+      "recorded_at": "2026-06-11 15:37:52",
       "symbol": "QQQ",
       "name": "Invesco QQQ Trust",
-      "value": 705.0599975585938,
-      "daily_change": -0.04800095663859216,
-      "history_high": 746.1599731445312,
-      "drawdown": -0.055081989204983084,
+      "value": 705.06,
+      "daily_change": -0.048000972171588385,
+      "history_high": 746.16,
+      "drawdown": -0.0550820199421036,
       "history_high_date": "2026-06-02",
       "quote_date": "2026-06-05",
       "unit": "USD",
       "source_ids": [
-        "yahoo_chart"
+        "nasdaq_api_historical"
       ]
     },
     {
       "track_date": "2026-06-08",
-      "recorded_at": "2026-06-08 15:32:28",
+      "recorded_at": "2026-06-11 15:37:52",
       "symbol": "NDX",
       "name": "Nasdaq 100 Index",
-      "value": 28957.599609375,
-      "daily_change": -0.04769205383151265,
-      "history_high": 30660.599609375,
-      "drawdown": -0.055543597375678155,
+      "value": 28957.6,
+      "daily_change": -0.04769202385834437,
+      "history_high": 30660.6,
+      "drawdown": -0.05554359666803654,
       "history_high_date": "2026-06-02",
       "quote_date": "2026-06-05",
       "unit": "points",
       "source_ids": [
-        "yahoo_chart"
+        "nasdaq_api_historical"
       ]
     },
     {
       "track_date": "2026-06-05",
-      "recorded_at": "2026-06-08 15:32:28",
+      "recorded_at": "2026-06-11 15:37:52",
       "symbol": "QQQ",
       "name": "Invesco QQQ Trust",
-      "value": 740.6099853515625,
-      "daily_change": -0.00483739336316813,
-      "history_high": 746.1599731445312,
-      "drawdown": -0.007438066892786477,
+      "value": 740.61,
+      "daily_change": -0.004837344297980439,
+      "history_high": 746.16,
+      "drawdown": -0.007438082984882577,
       "history_high_date": "2026-06-02",
       "quote_date": "2026-06-04",
       "unit": "USD",
       "source_ids": [
-        "yahoo_chart"
+        "nasdaq_api_historical"
       ]
     },
     {
       "track_date": "2026-06-05",
-      "recorded_at": "2026-06-08 15:32:28",
+      "recorded_at": "2026-06-11 15:37:52",
       "symbol": "NDX",
       "name": "Nasdaq 100 Index",
-      "value": 30407.810546875,
-      "daily_change": -0.005345863833036035,
-      "history_high": 30660.599609375,
-      "drawdown": -0.008244752735452221,
+      "value": 30407.81,
+      "daily_change": -0.005345874096045811,
+      "history_high": 30660.6,
+      "drawdown": -0.008244783207112638,
       "history_high_date": "2026-06-02",
       "quote_date": "2026-06-04",
       "unit": "points",
       "source_ids": [
-        "yahoo_chart"
+        "nasdaq_api_historical"
       ]
     }
   ]
