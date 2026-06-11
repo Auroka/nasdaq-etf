@@ -802,9 +802,9 @@ def render_html(data_file_name: str) -> str:
       --muted: #667085;
       --line: #d8dde6;
       --header: #263241;
-      --up: #b42318;
+      --up: #067647;
       --down: #067647;
-      --flat: #475467;
+      --flat: #067647;
       --accent: #2f6fed;
     }}
     * {{ box-sizing: border-box; }}
@@ -864,7 +864,7 @@ def render_html(data_file_name: str) -> str:
     .drawdown-item {{
       border: 1px solid var(--line);
       background: var(--panel);
-      padding: 10px 12px;
+      padding: 12px;
     }}
     .drawdown-title {{
       display: flex;
@@ -892,6 +892,21 @@ def render_html(data_file_name: str) -> str:
       font-family: Consolas, "SFMono-Regular", monospace;
       font-variant-numeric: tabular-nums;
       font-weight: 700;
+    }}
+    .drawdown-row-focus {{
+      align-items: center;
+      margin-top: 8px;
+      padding: 8px 10px;
+      border: 1px solid #abefc6;
+      background: #ecfdf3;
+      color: #075e3a;
+      font-size: 13px;
+      font-weight: 700;
+    }}
+    .drawdown-row-focus strong {{
+      color: #067647;
+      font-size: 18px;
+      font-weight: 800;
     }}
     .tabs {{
       display: flex;
@@ -937,7 +952,7 @@ def render_html(data_file_name: str) -> str:
     th, td {{
       padding: 10px 12px;
       border-bottom: 1px solid var(--line);
-      text-align: left;
+      text-align: center;
       white-space: nowrap;
       vertical-align: middle;
     }}
@@ -955,7 +970,7 @@ def render_html(data_file_name: str) -> str:
       font-family: Consolas, "SFMono-Regular", monospace;
       font-variant-numeric: tabular-nums;
     }}
-    td.num {{ text-align: right; }}
+    td.num {{ text-align: center; }}
     td.date-cell {{
       background: #f3f6fb;
       border-right: 1px solid var(--line);
@@ -972,9 +987,7 @@ def render_html(data_file_name: str) -> str:
       color: var(--muted);
       font-size: 12px;
     }}
-    .up {{ color: var(--up); font-weight: 600; }}
-    .down {{ color: var(--down); font-weight: 600; }}
-    .flat {{ color: var(--flat); }}
+    .up, .down, .flat {{ color: #067647; font-weight: 700; }}
     .empty td {{
       text-align: center;
       color: var(--muted);
@@ -1116,8 +1129,8 @@ def render_html(data_file_name: str) -> str:
       const fmtNumber = (value, digits) => Number(value).toFixed(digits);
       const fmtPct = (value) => `${(Number(value) * 100).toFixed(2)}%`;
       const cell = (value, className = "") => `<td${className ? ` class="${className}"` : ""}>${escapeHtml(value)}</td>`;
-      const summaryRow = (label, value, className = "") => (
-        `<div class="drawdown-row"><span>${escapeHtml(label)}</span><strong${className ? ` class="${className}"` : ""}>${escapeHtml(value)}</strong></div>`
+      const summaryRow = (label, value, className = "", rowClass = "") => (
+        `<div class="drawdown-row${rowClass ? ` ${rowClass}` : ""}"><span>${escapeHtml(label)}</span><strong${className ? ` class="${className}"` : ""}>${escapeHtml(value)}</strong></div>`
       );
       const summaryItem = (title, code, rows) => [
         '<div class="drawdown-item">',
@@ -1177,7 +1190,7 @@ def render_html(data_file_name: str) -> str:
           return summaryItem(row.name, row.code, [
             summaryRow("历史最高记录价", `${fmtNumber(highRow.price, 3)} / ${highRow.trade_date}`),
             summaryRow("当天更新价", `${fmtNumber(row.price, 3)} / ${row.trade_date}`),
-            summaryRow("回撤", fmtPct(drawdown), pctClass(drawdown)),
+            summaryRow("回撤", fmtPct(drawdown), pctClass(drawdown), "drawdown-row-focus"),
           ]);
         }).join("");
         document.getElementById("etf-drawdown-summary").innerHTML = html || '<div class="drawdown-item">暂无回撤数据</div>';
@@ -1187,7 +1200,7 @@ def render_html(data_file_name: str) -> str:
         const html = latest.map((row) => summaryItem(row.name, row.symbol, [
           summaryRow("历史最高收盘", `${fmtNumber(row.history_high, 2)} / ${row.history_high_date}`),
           summaryRow("当天更新点", `${fmtNumber(row.value, 2)} / ${row.quote_date}`),
-          summaryRow("回撤", fmtPct(row.drawdown), pctClass(Number(row.drawdown))),
+          summaryRow("回撤", fmtPct(row.drawdown), pctClass(Number(row.drawdown)), "drawdown-row-focus"),
         ])).join("");
         document.getElementById("benchmark-drawdown-summary").innerHTML = html || '<div class="drawdown-item">暂无回撤数据</div>';
       };
