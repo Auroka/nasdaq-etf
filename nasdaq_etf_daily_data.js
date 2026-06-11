@@ -1,5 +1,5 @@
 window.NASDAQ_TRACKING_DATA = {
-  "generated_at": "2026-06-11 14:04:30",
+  "generated_at": "2026-06-11 15:16:15",
   "etfs": [
     {
       "code": "513100",
@@ -79,6 +79,54 @@ window.NASDAQ_TRACKING_DATA = {
     }
   ],
   "etf_records": [
+    {
+      "trade_date": "2026-06-11",
+      "recorded_at": "2026-06-11 15:16:10",
+      "code": "513100",
+      "name": "纳指ETF国泰",
+      "price": 2.13,
+      "daily_change": -0.0060999999999999995,
+      "estimate": 1.9393,
+      "premium": 0.0983,
+      "quote_time": "2026-06-11 15:16:12",
+      "estimate_time": "2026-06-10",
+      "source_ids": [
+        "eastmoney_quote",
+        "tinyright_t1"
+      ]
+    },
+    {
+      "trade_date": "2026-06-11",
+      "recorded_at": "2026-06-11 15:16:10",
+      "code": "159501",
+      "name": "纳指ETF嘉实",
+      "price": 2.01,
+      "daily_change": -0.0045000000000000005,
+      "estimate": 1.8205,
+      "premium": 0.1041,
+      "quote_time": "2026-06-11 15:16:03",
+      "estimate_time": "2026-06-10",
+      "source_ids": [
+        "eastmoney_quote",
+        "tinyright_t1"
+      ]
+    },
+    {
+      "trade_date": "2026-06-11",
+      "recorded_at": "2026-06-11 15:16:10",
+      "code": "159659",
+      "name": "纳斯达克100ETF招商",
+      "price": 2.236,
+      "daily_change": -0.009300000000000001,
+      "estimate": 2.0878,
+      "premium": 0.071,
+      "quote_time": "2026-06-11 15:15:36",
+      "estimate_time": "2026-06-10",
+      "source_ids": [
+        "eastmoney_quote",
+        "tinyright_t1"
+      ]
+    },
     {
       "trade_date": "2026-06-10",
       "recorded_at": "2026-06-11 14:04:28",
@@ -465,6 +513,38 @@ window.NASDAQ_TRACKING_DATA = {
     }
   ],
   "benchmark_records": [
+    {
+      "track_date": "2026-06-11",
+      "recorded_at": "2026-06-11 15:16:10",
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "value": 707.8300170898438,
+      "daily_change": -0.011507241121808565,
+      "history_high": 746.1599731445312,
+      "drawdown": -0.051369622378903745,
+      "history_high_date": "2026-06-02",
+      "quote_date": "2026-06-09",
+      "unit": "USD",
+      "source_ids": [
+        "yahoo_chart"
+      ]
+    },
+    {
+      "track_date": "2026-06-11",
+      "recorded_at": "2026-06-11 15:16:10",
+      "symbol": "NDX",
+      "name": "Nasdaq 100 Index",
+      "value": 29084.5,
+      "daily_change": -0.011210880989443561,
+      "history_high": 30660.599609375,
+      "drawdown": -0.05140472232947069,
+      "history_high_date": "2026-06-02",
+      "quote_date": "2026-06-09",
+      "unit": "points",
+      "source_ids": [
+        "yahoo_chart"
+      ]
+    },
     {
       "track_date": "2026-06-10",
       "recorded_at": "2026-06-11 14:04:28",
