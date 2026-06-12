@@ -127,7 +127,7 @@ function EtfDrawdownSummary({ records, order }: { records: EtfRecord[]; order: M
 }
 
 function BenchmarkDrawdownSummary({ records, order }: { records: BenchmarkRecord[]; order: Map<string, number> }) {
-  const latest = latestRows(records, "track_date", "symbol", order);
+  const latest = latestRows(records, "quote_date", "symbol", order);
   const items = latest.map((row) => (
     <DrawdownItem
       key={row.symbol}
@@ -190,17 +190,17 @@ function EtfTable({ records }: { records: EtfRecord[] }) {
 }
 
 function BenchmarkTable({ records }: { records: BenchmarkRecord[] }) {
-  const groups = groupByDate(records, "track_date");
+  const groups = groupByDate(records, "quote_date");
   return (
     <table>
       <thead>
         <tr>
-          <th>跟踪日期</th>
+          <th>交易日期</th>
           <th>标的</th>
           <th>名称</th>
           <th>当前点位/价格</th>
           <th>当天涨幅</th>
-          <th>行情日期</th>
+          <th>跟踪日期</th>
           <th>走势</th>
         </tr>
       </thead>
@@ -208,7 +208,7 @@ function BenchmarkTable({ records }: { records: BenchmarkRecord[] }) {
         {groups.length ? (
           groups.flatMap(({ date, rows }) =>
             rows.map((row, index) => (
-              <tr key={`${row.track_date}-${row.symbol}`}>
+              <tr key={`${row.quote_date}-${row.track_date}-${row.symbol}`}>
                 {index === 0 && (
                   <td className="date-cell" rowSpan={rows.length}>
                     {date}
@@ -218,7 +218,7 @@ function BenchmarkTable({ records }: { records: BenchmarkRecord[] }) {
                 <td>{row.name}</td>
                 <td className="num">{fmtNumber(row.value, 2)}</td>
                 <td className="num percent">{fmtPct(row.daily_change)}</td>
-                <td>{row.quote_date}</td>
+                <td>{row.track_date}</td>
                 <td><TrendSparkline trend={row.trend} /></td>
               </tr>
             ))
@@ -264,7 +264,7 @@ function App({ appData }: { appData: NasdaqTrackingData }) {
   const benchmarkOrder = useMemo(() => orderMap(appData.benchmarks, "symbol"), [appData.benchmarks]);
   const etfRecords = useMemo(() => sortRows(appData.etf_records, "trade_date", "code", etfOrder), [appData.etf_records, etfOrder]);
   const benchmarkRecords = useMemo(
-    () => sortRows(appData.benchmark_records, "track_date", "symbol", benchmarkOrder),
+    () => sortRows(appData.benchmark_records, "quote_date", "symbol", benchmarkOrder),
     [appData.benchmark_records, benchmarkOrder]
   );
   const latestUpdate = [...etfRecords, ...benchmarkRecords]
