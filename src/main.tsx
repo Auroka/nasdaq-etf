@@ -7,6 +7,8 @@ type TabKey = "etfs" | "benchmarks" | "sources";
 
 const fmtNumber = (value: number, digits: number) => Number(value).toFixed(digits);
 const fmtPct = (value: number) => `${(Number(value) * 100).toFixed(2)}%`;
+const signedPctClass = (value: number) =>
+  `num percent ${value > 0 ? "percent-up" : value < 0 ? "percent-down" : "percent-flat"}`;
 
 const loadJson = async <T,>(url: string): Promise<T> => {
   const response = await fetch(url, { cache: "no-cache" });
@@ -198,9 +200,9 @@ function EtfTable({ records }: { records: EtfRecord[] }) {
                 <td className="mono">{row.code}</td>
                 <td>{row.name}</td>
                 <td className="num">{fmtNumber(row.price, 3)}</td>
-                <td className="num percent">{fmtPct(row.daily_change)}</td>
+                <td className={signedPctClass(row.daily_change)}>{fmtPct(row.daily_change)}</td>
                 <td className="num">{fmtNumber(row.estimate, 4)}</td>
-                <td className="num percent">{fmtPct(row.premium)}</td>
+                <td className={signedPctClass(row.premium)}>{fmtPct(row.premium)}</td>
                 <td>{row.estimate_time}</td>
                 <td><TrendSparkline trend={row.trend} /></td>
               </tr>
@@ -242,7 +244,7 @@ function BenchmarkTable({ records }: { records: BenchmarkRecord[] }) {
                 <td className="mono">{row.symbol}</td>
                 <td>{row.name}</td>
                 <td className="num">{fmtNumber(row.value, 2)}</td>
-                <td className="num percent">{fmtPct(row.daily_change)}</td>
+                <td className={signedPctClass(row.daily_change)}>{fmtPct(row.daily_change)}</td>
                 <td>{row.track_date}</td>
                 <td><TrendSparkline trend={row.trend} /></td>
               </tr>

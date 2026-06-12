@@ -10,6 +10,7 @@
   --green-dark: #075e3a;
   --green-soft: #ecfdf3;
   --green-line: #abefc6;
+  --red: #c2410c;
   --accent: #2f6fed;
 }
 
@@ -217,6 +218,18 @@ td.source-url {
 .percent {
   color: var(--green);
   font-weight: 700;
+}
+
+.percent-up {
+  color: var(--red);
+}
+
+.percent-down {
+  color: var(--green);
+}
+
+.percent-flat {
+  color: var(--text);
 }
 
 .trend-cell {
