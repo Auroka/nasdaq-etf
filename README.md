@@ -1,6 +1,6 @@
 # Nasdaq Tracking Daily Record
 
-纳斯达克 100 指数跟踪工具。记录三只 A 股纳指 ETF 的交易日收盘后数据，同时跟踪 QQQ 和 NDX 距离历史最高收盘点/价的回撤，并生成一个可直接打开查看的 HTML 页面。
+纳斯达克 100 指数跟踪工具。记录三只 A 股纳指 ETF 的交易日收盘后数据，同时跟踪 QQQ 和 NDX 距离历史最高收盘点/价的回撤，并生成一个可通过本地 HTTP 服务或 GitHub Pages 查看的 HTML 页面。
 
 ## 记录对象
 
@@ -47,7 +47,7 @@
 回撤 = 当前点位或价格 / 历史最高收盘点或价 - 1
 ```
 
-历史最高点按 Yahoo Finance 日线 close 统计，不使用盘中最高价。
+历史最高点默认按 Nasdaq 官方历史行情的收盘价统计，不使用盘中最高价；Yahoo Finance 仅作为备用源。
 
 ## 数据源配置
 
@@ -65,6 +65,17 @@ data/daily-records/YYYY/MM/YYYY-MM-DD.json
 ```
 
 HTML 先加载 `manifest.json`，再按索引加载按年月归档的每日 JSON；本地查看时用 HTTP 服务打开，和 GitHub Pages 的运行方式一致。
+
+目录示例：
+
+```text
+data/
+  manifest.json
+  daily-records/
+    2026/
+      06/
+        2026-06-11.json
+```
 
 ## 使用
 
