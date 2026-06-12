@@ -45,11 +45,6 @@ BENCHMARK_HEADERS = [
 ]
 SOURCE_HEADERS = ["数据源", "用途", "接口"]
 
-HTML_DATA_RE = re.compile(
-    r'<script\s+id="{script_id}"\s+type="application/json">(.*?)</script>',
-    re.S,
-)
-
 LEGACY_SOURCE_IDS = {
     "Eastmoney quote; n.tinyright T-1 valuation": ["eastmoney_quote", "tinyright_t1"],
     "n.tinyright quote and T-1 valuation": ["tinyright_table", "tinyright_t1"],
@@ -347,12 +342,77 @@ def parse_eastmoney_kline(config: dict, code: str, trade_date: dt.date) -> dict:
     }
 
 
+def downsample_trend_points(points: list[dict], max_points: int = 140) -> list[dict]:
+    # 分钟数据太多会让数据文件膨胀；保留走势形状即可。
+    if len(points) <= max_points:
+        return points
+    step = (len(points) - 1) / (max_points - 1)
+    return [points[round(index * step)] for index in range(max_points)]
+
+
+def trend_payload(trend_date: dt.date, source_ids: list[str], points: list[dict]) -> dict | None:
+    valid_points = [
+        {
+            "time": str(point["time"]),
+            "value": float(point["value"]),
+        }
+        for point in points
+        if as_float(point.get("value")) is not None
+    ]
+    if not valid_points:
+        return None
+    return {
+        "date": trend_date.isoformat(),
+        "source_ids": source_ids,
+        "points": downsample_trend_points(valid_points),
+    }
+
+
+def parse_eastmoney_trend(config: dict, code: str, target_date: dt.date) -> dict | None:
+    url = source_url(config, "eastmoney_trend", secid=secid_for_code(code))
+    data = json.loads(fetch_text(url))
+    rows = (data.get("data") or {}).get("trends") or []
+    points = []
+    for row in rows:
+        fields = str(row).split(",")
+        if len(fields) < 3:
+            continue
+        try:
+            point_time = dt.datetime.strptime(fields[0], "%Y-%m-%d %H:%M")
+        except ValueError:
+            continue
+        if point_time.date() != target_date:
+            continue
+        value = as_float(fields[2]) or as_float(fields[1])
+        if value is None:
+            continue
+        points.append({"time": point_time.strftime("%H:%M"), "value": value})
+    return trend_payload(target_date, ["eastmoney_trend"], points)
+
+
 def yahoo_date(timestamp: int) -> dt.date:
     return dt.datetime.fromtimestamp(timestamp, dt.timezone.utc).date()
 
 
 def parse_nasdaq_date(value: str) -> dt.date:
     return dt.datetime.strptime(value, "%m/%d/%Y").date()
+
+
+def parse_nasdaq_chart_date(value: str) -> dt.date:
+    return dt.datetime.strptime(value, "%b %d, %Y").date()
+
+
+def fetch_nasdaq_chart_payload(config: dict, item: dict) -> dict:
+    symbol = item.get("nasdaq_symbol") or item["symbol"]
+    assetclass = item.get("nasdaq_assetclass") or "index"
+    url = source_url(
+        config,
+        "nasdaq_api_chart",
+        symbol=quote(symbol, safe=""),
+        assetclass=assetclass,
+    )
+    data = json.loads(fetch_text(url))
+    return data.get("data") or {}
 
 
 def parse_nasdaq_history(
@@ -400,6 +460,49 @@ def parse_nasdaq_history(
     return sorted(points, key=lambda point: point["date"])
 
 
+def parse_nasdaq_chart_quote(config: dict, item: dict, target_date: dt.date) -> dict | None:
+    payload = fetch_nasdaq_chart_payload(config, item)
+    chart_date_text = payload.get("timeAsOf")
+    if not chart_date_text:
+        return None
+    try:
+        chart_date = parse_nasdaq_chart_date(chart_date_text)
+    except ValueError:
+        return None
+    if chart_date != target_date:
+        return None
+    close = parse_number_text(str(payload.get("lastSalePrice") or ""))
+    if close is None:
+        return None
+    return {
+        "date": chart_date,
+        "close": close,
+        "source_id": "nasdaq_api_chart",
+    }
+
+
+def parse_nasdaq_chart(config: dict, item: dict, target_date: dt.date) -> dict | None:
+    payload = fetch_nasdaq_chart_payload(config, item)
+    chart_date_text = payload.get("timeAsOf")
+    if not chart_date_text:
+        return None
+    try:
+        chart_date = parse_nasdaq_chart_date(chart_date_text)
+    except ValueError:
+        return None
+    if chart_date != target_date:
+        return None
+
+    points = []
+    for point in payload.get("chart") or []:
+        value = as_float(point.get("y")) or as_float((point.get("z") or {}).get("value"))
+        time_text = (point.get("z") or {}).get("dateTime") or ""
+        if value is None or not time_text:
+            continue
+        points.append({"time": time_text.replace(" ET", ""), "value": value})
+    return trend_payload(target_date, ["nasdaq_api_chart"], points)
+
+
 def parse_benchmark_history(config: dict, item: dict, target_date: dt.date | None = None) -> dict:
     symbol = item["yahoo_symbol"]
     source_ids: set[str] = set()
@@ -442,15 +545,23 @@ def parse_benchmark_history(config: dict, item: dict, target_date: dt.date | Non
             source_ids = {"nasdaq_api_historical"}
 
     if target_date and not any(point["date"] == target_date for point in points):
+        target_points = []
         try:
             nasdaq_points = parse_nasdaq_history(config, item, target_date)
+            target_points = [point for point in nasdaq_points if point["date"] == target_date]
         except RuntimeError:
-            nasdaq_points = []
-        target_points = [point for point in nasdaq_points if point["date"] == target_date]
+            pass
+        if not target_points:
+            try:
+                chart_point = parse_nasdaq_chart_quote(config, item, target_date)
+            except (RuntimeError, json.JSONDecodeError, ValueError):
+                chart_point = None
+            if chart_point:
+                target_points = [chart_point]
         if target_points:
             points.append(target_points[-1])
             points = sorted(points, key=lambda point: point["date"])
-            source_ids.add("nasdaq_api_historical")
+            source_ids.add(target_points[-1].get("source_id", "nasdaq_api_historical"))
 
     selected_index = len(points) - 1
     if target_date:
@@ -519,10 +630,15 @@ def build_etf_rows(config: dict, now: dt.datetime) -> list[dict]:
         if premium is None:
             premium = price / estimate - 1
         source_ids = ["eastmoney_quote", "tinyright_t1"] if quote_row else ["tinyright_table", "tinyright_t1"]
+        trade_date = (q_time or now).date()
+        try:
+            trend = parse_eastmoney_trend(config, code, trade_date)
+        except (RuntimeError, json.JSONDecodeError, ValueError):
+            trend = None
 
         rows.append(
             {
-                "trade_date": (q_time or now).date(),
+                "trade_date": trade_date,
                 "recorded_at": now.strftime("%Y-%m-%d %H:%M:%S"),
                 "code": code,
                 "name": quote_row.get("f14") or market.get("name") or code,
@@ -535,6 +651,7 @@ def build_etf_rows(config: dict, now: dt.datetime) -> list[dict]:
                 "source_ids": source_ids,
                 "quote_date": q_time.date() if q_time else None,
                 "estimate_date": e_time.date() if e_time else None,
+                "trend": trend,
             }
         )
 
@@ -610,11 +727,16 @@ def build_benchmark_rows(
     rows = []
     for item in config.get("benchmarks", []):
         quote_row = parse_benchmark_history(config, item, target_date)
+        try:
+            trend = parse_nasdaq_chart(config, item, quote_row["quote_date"])
+        except (RuntimeError, json.JSONDecodeError, ValueError):
+            trend = None
         rows.append(
             {
                 "track_date": track_date,
                 "recorded_at": now.strftime("%Y-%m-%d %H:%M:%S"),
                 **quote_row,
+                "trend": trend,
             }
         )
     return rows
@@ -635,6 +757,7 @@ def public_etf_row(item: dict) -> dict:
         "quote_time": item.get("quote_time", ""),
         "estimate_time": item["estimate_time"],
         "source_ids": item.get("source_ids") or infer_legacy_source_ids(item.get("source", "")),
+        "trend": item.get("trend"),
     }
 
 
@@ -658,6 +781,7 @@ def public_benchmark_row(item: dict) -> dict:
         else str(item["quote_date"]),
         "unit": item.get("unit", ""),
         "source_ids": item.get("source_ids", ["yahoo_chart"]),
+        "trend": item.get("trend"),
     }
 
 
@@ -672,6 +796,7 @@ def infer_legacy_source_ids(source_text: str) -> list[str]:
 def normalize_etf_record(row: dict) -> dict:
     normalized = dict(row)
     normalized["source_ids"] = normalized.get("source_ids") or infer_legacy_source_ids(normalized.get("source", ""))
+    normalized["trend"] = normalized.get("trend")
     normalized.pop("source", None)
     return normalized
 
@@ -679,6 +804,7 @@ def normalize_etf_record(row: dict) -> dict:
 def normalize_benchmark_record(row: dict) -> dict:
     normalized = dict(row)
     normalized["source_ids"] = normalized.get("source_ids") or ["yahoo_chart"]
+    normalized["trend"] = normalized.get("trend")
     return normalized
 
 
@@ -686,14 +812,6 @@ def data_path_for_html(path: Path) -> Path:
     if path == DEFAULT_OUTPUT:
         return DEFAULT_DATA_OUTPUT
     return path.with_name(f"{path.stem}_data.js")
-
-
-def read_json_script(content: str, script_id: str) -> object | None:
-    pattern = re.compile(HTML_DATA_RE.pattern.format(script_id=re.escape(script_id)), re.S)
-    match = pattern.search(content)
-    if not match:
-        return None
-    return json.loads(html.unescape(match.group(1)))
 
 
 def read_data_file(path: Path) -> dict | None:
@@ -710,44 +828,14 @@ def read_data_file(path: Path) -> dict | None:
     return json.loads(match.group(1))
 
 
-def read_records(data_path: Path, html_path: Path) -> tuple[list[dict], list[dict]]:
+def read_records(data_path: Path) -> tuple[list[dict], list[dict]]:
     data = read_data_file(data_path)
     if isinstance(data, dict):
         return (
             [normalize_etf_record(row) for row in data.get("etf_records", [])],
             [normalize_benchmark_record(row) for row in data.get("benchmark_records", [])],
         )
-
-    if not html_path.exists():
-        return [], []
-    content = html_path.read_text(encoding="utf-8")
-    app_data = read_json_script(content, "app-data")
-    if isinstance(app_data, dict):
-        etf_records = app_data.get("etf_records", [])
-        benchmark_records = app_data.get("benchmark_records", [])
-    else:
-        etf_records = read_json_script(content, "records-data") or []
-        benchmark_records = read_json_script(content, "benchmark-records-data") or []
-    return (
-        [normalize_etf_record(row) for row in etf_records],
-        [normalize_benchmark_record(row) for row in benchmark_records],
-    )
-
-
-def pct_class(value: float) -> str:
-    if value > 0:
-        return "up"
-    if value < 0:
-        return "down"
-    return "flat"
-
-
-def fmt_number(value: float, digits: int) -> str:
-    return f"{value:.{digits}f}"
-
-
-def fmt_pct(value: float) -> str:
-    return f"{value * 100:.2f}%"
+    return [], []
 
 
 def sort_etf_records(records: list[dict], codes: tuple[str, ...]) -> list[dict]:
@@ -787,492 +875,22 @@ def render_data_js(etf_records: list[dict], benchmark_records: list[dict], confi
 
 def render_html(data_file_name: str) -> str:
     data_file = html.escape(data_file_name, quote=True)
-    return """<!doctype html>
+    # Python 只负责数据和页面壳，具体界面交给 React。
+    return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>纳指跟踪记录</title>
-  <style>
-    :root {{
-      color-scheme: light;
-      --bg: #f7f8fa;
-      --panel: #ffffff;
-      --text: #20242a;
-      --muted: #667085;
-      --line: #d8dde6;
-      --header: #263241;
-      --up: #067647;
-      --down: #067647;
-      --flat: #067647;
-      --accent: #2f6fed;
-    }}
-    * {{ box-sizing: border-box; }}
-    body {{
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: "Microsoft YaHei", Arial, sans-serif;
-      font-size: 14px;
-      line-height: 1.5;
-    }}
-    main {{
-      width: min(1320px, calc(100% - 32px));
-      margin: 24px auto;
-    }}
-    .top {{
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 18px;
-    }}
-    h1 {{
-      margin: 0 0 4px;
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: 0;
-    }}
-    .section-block {{
-      margin-top: 14px;
-    }}
-    .meta {{
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 13px;
-    }}
-    .pill {{
-      border: 1px solid var(--line);
-      background: var(--panel);
-      padding: 4px 8px;
-      border-radius: 6px;
-      white-space: nowrap;
-    }}
-    .table-wrap {{
-      overflow-x: auto;
-      border: 1px solid var(--line);
-      background: var(--panel);
-    }}
-    .drawdown-grid {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 10px;
-      margin: 0 0 12px;
-    }}
-    .drawdown-item {{
-      border: 1px solid var(--line);
-      background: var(--panel);
-      padding: 12px;
-    }}
-    .drawdown-title {{
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 8px;
-      font-weight: 700;
-    }}
-    .drawdown-code {{
-      font-family: Consolas, "SFMono-Regular", monospace;
-      font-variant-numeric: tabular-nums;
-      color: var(--muted);
-      font-size: 12px;
-    }}
-    .drawdown-row {{
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      color: var(--muted);
-      font-size: 12px;
-    }}
-    .drawdown-row strong {{
-      color: var(--text);
-      font-family: Consolas, "SFMono-Regular", monospace;
-      font-variant-numeric: tabular-nums;
-      font-weight: 700;
-    }}
-    .drawdown-row-focus {{
-      align-items: center;
-      margin-top: 8px;
-      padding: 8px 10px;
-      border: 1px solid #abefc6;
-      background: #ecfdf3;
-      color: #075e3a;
-      font-size: 13px;
-      font-weight: 700;
-    }}
-    .drawdown-row-focus strong {{
-      color: #067647;
-      font-size: 18px;
-      font-weight: 800;
-    }}
-    .tabs {{
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin: 16px 0 0;
-      border-bottom: 1px solid var(--line);
-    }}
-    .tab-button {{
-      appearance: none;
-      border: 1px solid transparent;
-      border-bottom: 0;
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      font: inherit;
-      font-weight: 600;
-      padding: 9px 14px;
-      min-height: 38px;
-    }}
-    .tab-button:hover {{
-      color: var(--text);
-      background: #eef4ff;
-    }}
-    .tab-button[aria-selected="true"] {{
-      background: var(--panel);
-      border-color: var(--line);
-      color: var(--accent);
-      position: relative;
-      top: 1px;
-    }}
-    .tab-panel[hidden] {{
-      display: none;
-    }}
-    table {{
-      width: 100%;
-      min-width: 1120px;
-      border-collapse: collapse;
-    }}
-    .compact table {{
-      min-width: 900px;
-    }}
-    th, td {{
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--line);
-      text-align: center;
-      white-space: nowrap;
-      vertical-align: middle;
-    }}
-    th {{
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      background: var(--header);
-      color: #ffffff;
-      font-weight: 600;
-    }}
-    tbody tr:nth-child(even) {{ background: #fbfcfe; }}
-    tbody tr:hover {{ background: #eef4ff; }}
-    td.num, td.mono {{
-      font-family: Consolas, "SFMono-Regular", monospace;
-      font-variant-numeric: tabular-nums;
-    }}
-    td.num {{ text-align: center; }}
-    td.date-cell {{
-      background: #f3f6fb;
-      border-right: 1px solid var(--line);
-      font-family: Consolas, "SFMono-Regular", monospace;
-      font-variant-numeric: tabular-nums;
-      font-weight: 700;
-      text-align: center;
-      vertical-align: middle;
-    }}
-    td.source-url {{
-      max-width: 520px;
-      white-space: normal;
-      word-break: break-all;
-      color: var(--muted);
-      font-size: 12px;
-    }}
-    .up, .down, .flat {{ color: #067647; font-weight: 700; }}
-    .empty td {{
-      text-align: center;
-      color: var(--muted);
-      padding: 28px 12px;
-    }}
-    .note {{
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 12px;
-    }}
-    .data-error {{
-      border: 1px solid #fecdca;
-      background: #fff1f0;
-      color: #b42318;
-      padding: 10px 12px;
-      margin: 12px 0 0;
-    }}
-    @media (max-width: 720px) {{
-      main {{ width: min(100% - 20px, 1320px); margin: 16px auto; }}
-      .top {{ align-items: flex-start; flex-direction: column; }}
-      h1 {{ font-size: 20px; }}
-      .tabs {{ overflow-x: auto; }}
-      .tab-button {{ flex: 0 0 auto; padding: 8px 12px; }}
-      th, td {{ padding: 9px 10px; }}
-    }}
-  </style>
+  <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
-  <main>
-    <section class="top" aria-label="概览">
-      <div>
-        <h1>纳指跟踪记录</h1>
-        <div class="meta">
-          <span class="pill">最新日期：<span id="latest-date">-</span></span>
-        </div>
-      </div>
-      <div class="meta">
-        <span class="pill">最近更新：<span id="updated-at">-</span></span>
-      </div>
-    </section>
-    <p id="data-error" class="data-error" hidden></p>
-    <nav class="tabs" role="tablist" aria-label="数据表格">
-      <button class="tab-button" id="tab-etfs" type="button" role="tab" aria-selected="true" aria-controls="panel-etfs" data-tab-target="etfs">ETF每日记录</button>
-      <button class="tab-button" id="tab-benchmarks" type="button" role="tab" aria-selected="false" aria-controls="panel-benchmarks" data-tab-target="benchmarks">QQQ/NDX每日记录</button>
-      <button class="tab-button" id="tab-sources" type="button" role="tab" aria-selected="false" aria-controls="panel-sources" data-tab-target="sources">数据源</button>
-    </nav>
-    <section class="tab-panel" id="panel-etfs" role="tabpanel" aria-labelledby="tab-etfs">
-      <section class="section-block" aria-label="A股纳指 ETF 溢价记录">
-        <div class="drawdown-grid" id="etf-drawdown-summary"></div>
-        <div class="table-wrap">
-          <table id="etf-table">
-            <thead><tr><th>交易日期</th><th>代码</th><th>名称</th><th>当前价格</th><th>当天涨幅</th><th>T-1估值</th><th>溢价率</th><th>T-1估值日</th><th>数据源</th></tr></thead>
-            <tbody id="etf-records-body"><tr class="empty"><td colspan="9">暂无记录</td></tr></tbody>
-          </table>
-        </div>
-      </section>
-      <p class="note">ETF 溢价率 = 当前价格 / T-1 估值 - 1。相同交易日期和代码重复运行时更新原行。</p>
-    </section>
-    <section class="tab-panel" id="panel-benchmarks" role="tabpanel" aria-labelledby="tab-benchmarks" hidden>
-      <section class="section-block" aria-label="QQQ / NDX 回撤记录">
-        <div class="drawdown-grid" id="benchmark-drawdown-summary"></div>
-        <div class="table-wrap">
-          <table id="benchmark-table">
-            <thead><tr><th>跟踪日期</th><th>标的</th><th>名称</th><th>当前点位/价格</th><th>当天涨幅</th><th>行情日期</th><th>数据源</th></tr></thead>
-            <tbody id="benchmark-records-body"><tr class="empty"><td colspan="7">暂无记录</td></tr></tbody>
-          </table>
-        </div>
-      </section>
-      <p class="note">QQQ/NDX 摘要默认按 Nasdaq 官方历史行情统计；Yahoo Finance 日线行情仅作为备用源。回撤 = 当前点位或价格 / 历史最高收盘点或价 - 1。</p>
-    </section>
-    <section class="tab-panel" id="panel-sources" role="tabpanel" aria-labelledby="tab-sources" hidden>
-      <section class="section-block" aria-label="数据源">
-        <div class="table-wrap compact">
-          <table id="source-table">
-            <thead><tr><th>数据源</th><th>用途</th><th>接口</th></tr></thead>
-            <tbody id="sources-body"><tr class="empty"><td colspan="3">暂无数据源</td></tr></tbody>
-          </table>
-        </div>
-      </section>
-    </section>
-  </main>
-  <script src="__DATA_FILE__"></script>
-  <script>
-    (() => {
-      const data = window.NASDAQ_TRACKING_DATA;
-      const errorNode = document.getElementById("data-error");
-      const tabButtons = [...document.querySelectorAll("[data-tab-target]")];
-      const tabPanels = new Map(
-        [...document.querySelectorAll(".tab-panel")].map((panel) => [
-          panel.id.replace("panel-", ""),
-          panel,
-        ])
-      );
-      const activateTab = (target, updateHash = true) => {
-        const activeTarget = tabPanels.has(target) ? target : "etfs";
-        tabButtons.forEach((button) => {
-          const selected = button.dataset.tabTarget === activeTarget;
-          button.setAttribute("aria-selected", String(selected));
-          button.tabIndex = selected ? 0 : -1;
-        });
-        tabPanels.forEach((panel, panelTarget) => {
-          panel.hidden = panelTarget !== activeTarget;
-        });
-        if (updateHash) {
-          history.replaceState(null, "", `#${activeTarget}`);
-        }
-      };
-      tabButtons.forEach((button) => {
-        button.addEventListener("click", () => activateTab(button.dataset.tabTarget));
-        button.addEventListener("keydown", (event) => {
-          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-          event.preventDefault();
-          const currentIndex = tabButtons.indexOf(button);
-          const nextIndex = event.key === "Home"
-            ? 0
-            : event.key === "End"
-              ? tabButtons.length - 1
-              : event.key === "ArrowRight"
-                ? (currentIndex + 1) % tabButtons.length
-                : (currentIndex - 1 + tabButtons.length) % tabButtons.length;
-          tabButtons[nextIndex].focus();
-          activateTab(tabButtons[nextIndex].dataset.tabTarget);
-        });
-      });
-      activateTab(location.hash.slice(1) || "etfs", false);
-      const setText = (id, value) => {
-        const node = document.getElementById(id);
-        if (node) {
-          node.textContent = value ?? "-";
-        }
-      };
-      const escapeHtml = (value) => String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
-      const pctClass = (value) => value > 0 ? "up" : value < 0 ? "down" : "flat";
-      const fmtNumber = (value, digits) => Number(value).toFixed(digits);
-      const fmtPct = (value) => `${(Number(value) * 100).toFixed(2)}%`;
-      const cell = (value, className = "") => `<td${className ? ` class="${className}"` : ""}>${escapeHtml(value)}</td>`;
-      const summaryRow = (label, value, className = "", rowClass = "") => (
-        `<div class="drawdown-row${rowClass ? ` ${rowClass}` : ""}"><span>${escapeHtml(label)}</span><strong${className ? ` class="${className}"` : ""}>${escapeHtml(value)}</strong></div>`
-      );
-      const summaryItem = (title, code, rows) => [
-        '<div class="drawdown-item">',
-        '<div class="drawdown-title">',
-        `<span>${escapeHtml(title)}</span>`,
-        `<span class="drawdown-code">${escapeHtml(code)}</span>`,
-        '</div>',
-        rows.join(""),
-        '</div>',
-      ].join("");
-      const sourceMap = new Map((data?.sources || []).map((item) => [item.id, item]));
-      const sourceNames = (ids) => (ids || [])
-        .map((id) => sourceMap.get(id)?.name || id)
-        .join("；");
-      const orderMap = (items, key) => new Map((items || []).map((item, index) => [item[key], index]));
-      const sortRows = (rows, dateKey, codeKey, order) => [...(rows || [])].sort((left, right) => {
-        const dateCompare = String(right[dateKey] || "").localeCompare(String(left[dateKey] || ""));
-        if (dateCompare !== 0) return dateCompare;
-        return (order.get(left[codeKey]) ?? 99) - (order.get(right[codeKey]) ?? 99);
-      });
-      const groupedRows = (records, dateKey, colspan, renderCells) => {
-        if (!records.length) {
-          return `<tr class="empty"><td colspan="${colspan}">暂无记录</td></tr>`;
-        }
-        let html = "";
-        let index = 0;
-        while (index < records.length) {
-          const date = records[index][dateKey];
-          const group = records.filter((item) => item[dateKey] === date);
-          group.forEach((row, groupIndex) => {
-            html += "<tr>";
-            if (groupIndex === 0) {
-              html += `<td class="date-cell" rowspan="${group.length}">${escapeHtml(date)}</td>`;
-            }
-            html += renderCells(row);
-            html += "</tr>";
-          });
-          index += group.length;
-        }
-        return html;
-      };
-      const latestRows = (records, dateKey, codeKey, order) => {
-        const latestDate = [...new Set((records || []).map((row) => row[dateKey]).filter(Boolean))]
-          .sort()
-          .at(-1);
-        if (!latestDate) return [];
-        return sortRows(records.filter((row) => row[dateKey] === latestDate), dateKey, codeKey, order);
-      };
-      const renderEtfDrawdownSummary = (records) => {
-        const latest = latestRows(records, "trade_date", "code", etfOrder);
-        const html = latest.map((row) => {
-          const sameCode = records.filter((item) => item.code === row.code);
-          const highRow = sameCode.reduce((best, item) => (
-            Number(item.price) > Number(best.price) ? item : best
-          ), sameCode[0]);
-          const drawdown = Number(row.price) / Number(highRow.price) - 1;
-          return summaryItem(row.name, row.code, [
-            summaryRow("历史最高记录价", `${fmtNumber(highRow.price, 3)} / ${highRow.trade_date}`),
-            summaryRow("当天更新价", `${fmtNumber(row.price, 3)} / ${row.trade_date}`),
-            summaryRow("回撤", fmtPct(drawdown), pctClass(drawdown), "drawdown-row-focus"),
-          ]);
-        }).join("");
-        document.getElementById("etf-drawdown-summary").innerHTML = html || '<div class="drawdown-item">暂无回撤数据</div>';
-      };
-      const renderBenchmarkDrawdownSummary = (records) => {
-        const latest = latestRows(records, "track_date", "symbol", benchmarkOrder);
-        const html = latest.map((row) => summaryItem(row.name, row.symbol, [
-          summaryRow("历史最高收盘", `${fmtNumber(row.history_high, 2)} / ${row.history_high_date}`),
-          summaryRow("当天更新点", `${fmtNumber(row.value, 2)} / ${row.quote_date}`),
-          summaryRow("回撤", fmtPct(row.drawdown), pctClass(Number(row.drawdown)), "drawdown-row-focus"),
-        ])).join("");
-        document.getElementById("benchmark-drawdown-summary").innerHTML = html || '<div class="drawdown-item">暂无回撤数据</div>';
-      };
-
-      if (!data) {
-        errorNode.hidden = false;
-        errorNode.textContent = "未加载到 nasdaq_etf_daily_data.js，请确认该文件和 HTML 在同一目录。";
-        return;
-      }
-
-      const etfOrder = orderMap(data.etfs, "code");
-      const benchmarkOrder = orderMap(data.benchmarks, "symbol");
-      const etfRecords = sortRows(data.etf_records, "trade_date", "code", etfOrder);
-      const benchmarkRecords = sortRows(data.benchmark_records, "track_date", "symbol", benchmarkOrder);
-      const dates = [...new Set([
-        ...etfRecords.map((row) => row.trade_date),
-        ...benchmarkRecords.map((row) => row.track_date),
-      ].filter(Boolean))];
-      const updatedAt = [...etfRecords, ...benchmarkRecords]
-        .map((row) => row.recorded_at || "")
-        .sort()
-        .at(-1) || "-";
-
-      setText("latest-date", dates.sort().at(-1) || "-");
-      setText("updated-at", updatedAt);
-      renderEtfDrawdownSummary(etfRecords);
-      renderBenchmarkDrawdownSummary(benchmarkRecords);
-
-      document.getElementById("etf-records-body").innerHTML = groupedRows(
-        etfRecords,
-        "trade_date",
-        9,
-        (row) => [
-          cell(row.code, "mono"),
-          cell(row.name),
-          cell(fmtNumber(row.price, 3), "num"),
-          cell(fmtPct(row.daily_change), `num ${pctClass(Number(row.daily_change))}`),
-          cell(fmtNumber(row.estimate, 4), "num"),
-          cell(fmtPct(row.premium), `num ${pctClass(Number(row.premium))}`),
-          cell(row.estimate_time),
-          cell(sourceNames(row.source_ids)),
-        ].join("")
-      );
-
-      document.getElementById("benchmark-records-body").innerHTML = groupedRows(
-        benchmarkRecords,
-        "track_date",
-        7,
-        (row) => [
-          cell(row.symbol, "mono"),
-          cell(row.name),
-          cell(fmtNumber(row.value, 2), "num"),
-          cell(fmtPct(row.daily_change), `num ${pctClass(Number(row.daily_change))}`),
-          cell(row.quote_date),
-          cell(sourceNames(row.source_ids)),
-        ].join("")
-      );
-
-      document.getElementById("sources-body").innerHTML = (data.sources || []).length
-        ? data.sources.map((source) => [
-          "<tr>",
-          cell(source.name),
-          cell(source.purpose),
-          cell(source.url_template || source.url || "-", "source-url"),
-          "</tr>",
-        ].join("")).join("")
-        : '<tr class="empty"><td colspan="3">暂无数据源</td></tr>';
-    })();
-  </script>
+  <div id="root"></div>
+  <script src="{data_file}"></script>
+  <script type="module" src="assets/app.js"></script>
 </body>
 </html>
-""".replace("__DATA_FILE__", data_file).replace("{{", "{").replace("}}", "}")
+"""
 
 
 def upsert_records(records: list[dict], rows: list[dict], key_fields: tuple[str, ...]) -> int:
@@ -1299,7 +917,7 @@ def write_rows(
     etf_rows: list[dict] | None = None,
     benchmark_rows: list[dict] | None = None,
 ) -> tuple[int, int]:
-    etf_records, benchmark_records = read_records(data_path, path)
+    etf_records, benchmark_records = read_records(data_path)
     etf_records = [normalize_etf_record(row) for row in etf_records]
     benchmark_records = [normalize_benchmark_record(row) for row in benchmark_records]
 
@@ -1414,7 +1032,7 @@ def main() -> int:
 
     if args.refresh_benchmarks:
         try:
-            _, benchmark_records = read_records(data_path, path)
+            _, benchmark_records = read_records(data_path)
             benchmark_rows = build_benchmark_refresh_rows(config, benchmark_records, now)
         except (HTTPError, URLError, TimeoutError, RuntimeError, json.JSONDecodeError, ValueError) as exc:
             print(f"failed: {exc}", file=sys.stderr)

@@ -89,7 +89,44 @@ python record_nasdaq_etf.py --refresh-benchmarks
 
 ```text
 index.html
+assets/app.js
+assets/app.css
 nasdaq_etf_daily_data.js
+```
+
+前端使用 React + TypeScript，修改页面后构建：
+
+```powershell
+npm run typecheck
+npm run build
+```
+
+## GitHub Pages
+
+这个项目可以直接用 GitHub Pages 静态托管。
+
+发布前确保这些文件已提交并推送：
+
+```text
+index.html
+assets/app.js
+assets/app.css
+nasdaq_etf_daily_data.js
+```
+
+GitHub 仓库设置：
+
+```text
+Settings -> Pages -> Build and deployment
+Source: Deploy from a branch
+Branch: main
+Folder: / (root)
+```
+
+启用后访问：
+
+```text
+https://auroka.github.io/nasdaq-etf/
 ```
 
 ## 说明

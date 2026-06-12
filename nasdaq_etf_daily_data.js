@@ -1,5 +1,5 @@
 window.NASDAQ_TRACKING_DATA = {
-  "generated_at": "2026-06-11 15:38:02",
+  "generated_at": "2026-06-12 09:48:27",
   "etfs": [
     {
       "code": "513100",
@@ -46,6 +46,12 @@ window.NASDAQ_TRACKING_DATA = {
       "url_template": "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid={secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=101&fqt=1&beg={date}&end={date}"
     },
     {
+      "id": "eastmoney_trend",
+      "name": "东方财富分钟走势",
+      "purpose": "A股纳指 ETF 当天分钟走势折线图",
+      "url_template": "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid={secid}&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11&fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&iscca=0&ndays=1"
+    },
+    {
       "id": "tinyright_t1",
       "name": "估值日记 T-1 估值",
       "purpose": "A股纳指 ETF T-1 估值和估值日",
@@ -76,6 +82,12 @@ window.NASDAQ_TRACKING_DATA = {
       "url_template": "https://api.nasdaq.com/api/quote/{symbol}/historical?assetclass={assetclass}&fromdate={fromdate}&todate={todate}&limit=30"
     },
     {
+      "id": "nasdaq_api_chart",
+      "name": "Nasdaq 官方分钟走势",
+      "purpose": "QQQ 和 NDX 当天分钟走势折线图；历史接口目标日缺失时补最新价",
+      "url_template": "https://api.nasdaq.com/api/quote/{symbol}/chart?assetclass={assetclass}"
+    },
+    {
       "id": "manual_historical_quote",
       "name": "人工保留的历史行情",
       "purpose": "已补录记录中的历史收盘价",
@@ -103,7 +115,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-11",
@@ -119,7 +132,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-11",
@@ -135,7 +149,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-10",
@@ -151,7 +166,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_kline",
         "tinyright_iopv"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-10",
@@ -167,7 +183,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_kline",
         "tinyright_iopv"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-10",
@@ -183,7 +200,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_kline",
         "tinyright_iopv"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-09",
@@ -199,7 +217,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-09",
@@ -215,7 +234,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-09",
@@ -231,7 +251,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-08",
@@ -247,7 +268,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-08",
@@ -263,7 +285,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-08",
@@ -279,7 +302,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-05",
@@ -295,7 +319,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "tinyright_table",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-05",
@@ -311,7 +336,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "tinyright_table",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-05",
@@ -327,7 +353,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "tinyright_table",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-04",
@@ -343,7 +370,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-04",
@@ -359,7 +387,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-04",
@@ -375,7 +404,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-03",
@@ -391,7 +421,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-03",
@@ -407,7 +438,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-03",
@@ -423,7 +455,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-02",
@@ -439,7 +472,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "tinyright_table",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-02",
@@ -455,7 +489,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "tinyright_table",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-02",
@@ -471,7 +506,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "tinyright_table",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-01",
@@ -487,7 +523,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "manual_historical_quote",
         "user_provided_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-01",
@@ -503,7 +540,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "manual_historical_quote",
         "user_provided_t1"
-      ]
+      ],
+      "trend": null
     },
     {
       "trade_date": "2026-06-01",
@@ -519,7 +557,8 @@ window.NASDAQ_TRACKING_DATA = {
       "source_ids": [
         "manual_historical_quote",
         "tinyright_t1"
-      ]
+      ],
+      "trend": null
     }
   ],
   "benchmark_records": [
@@ -537,7 +576,8 @@ window.NASDAQ_TRACKING_DATA = {
       "unit": "USD",
       "source_ids": [
         "nasdaq_api_historical"
-      ]
+      ],
+      "trend": null
     },
     {
       "track_date": "2026-06-11",
@@ -553,7 +593,8 @@ window.NASDAQ_TRACKING_DATA = {
       "unit": "points",
       "source_ids": [
         "nasdaq_api_historical"
-      ]
+      ],
+      "trend": null
     },
     {
       "track_date": "2026-06-10",
@@ -569,7 +610,8 @@ window.NASDAQ_TRACKING_DATA = {
       "unit": "USD",
       "source_ids": [
         "nasdaq_api_historical"
-      ]
+      ],
+      "trend": null
     },
     {
       "track_date": "2026-06-10",
@@ -585,7 +627,8 @@ window.NASDAQ_TRACKING_DATA = {
       "unit": "points",
       "source_ids": [
         "nasdaq_api_historical"
-      ]
+      ],
+      "trend": null
     },
     {
       "track_date": "2026-06-09",
@@ -601,7 +644,8 @@ window.NASDAQ_TRACKING_DATA = {
       "unit": "USD",
       "source_ids": [
         "nasdaq_api_historical"
-      ]
+      ],
+      "trend": null
     },
     {
       "track_date": "2026-06-09",
@@ -617,7 +661,8 @@ window.NASDAQ_TRACKING_DATA = {
       "unit": "points",
       "source_ids": [
         "nasdaq_api_historical"
-      ]
+      ],
+      "trend": null
     },
     {
       "track_date": "2026-06-08",
@@ -633,7 +678,8 @@ window.NASDAQ_TRACKING_DATA = {
       "unit": "USD",
       "source_ids": [
         "nasdaq_api_historical"
-      ]
+      ],
+      "trend": null
     },
     {
       "track_date": "2026-06-08",
@@ -649,7 +695,8 @@ window.NASDAQ_TRACKING_DATA = {
       "unit": "points",
       "source_ids": [
         "nasdaq_api_historical"
-      ]
+      ],
+      "trend": null
     },
     {
       "track_date": "2026-06-05",
@@ -665,7 +712,8 @@ window.NASDAQ_TRACKING_DATA = {
       "unit": "USD",
       "source_ids": [
         "nasdaq_api_historical"
-      ]
+      ],
+      "trend": null
     },
     {
       "track_date": "2026-06-05",
@@ -681,7 +729,8 @@ window.NASDAQ_TRACKING_DATA = {
       "unit": "points",
       "source_ids": [
         "nasdaq_api_historical"
-      ]
+      ],
+      "trend": null
     }
   ]
 };
