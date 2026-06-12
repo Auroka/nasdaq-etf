@@ -55,7 +55,7 @@ const groupByDate = <T extends object>(rows: T[], dateKey: keyof T) => {
 function TrendSparkline({ trend }: { trend?: Trend | null }) {
   const points = trend?.points?.filter((point) => Number.isFinite(point.value)) ?? [];
   if (points.length < 2) {
-    return <span className="trend-empty">暂无走势</span>;
+    return <span className="trend-empty" title="这条记录生成时还没有保存分钟走势">未记录走势</span>;
   }
 
   const width = 132;
@@ -269,7 +269,6 @@ function App({ appData }: { appData: NasdaqTrackingData }) {
     () => sortRows(appData.benchmark_records, "track_date", "symbol", benchmarkOrder),
     [appData.benchmark_records, benchmarkOrder]
   );
-  const latestDate = [...etfRecords.map((row) => row.trade_date), ...benchmarkRecords.map((row) => row.track_date)].sort().pop() ?? "-";
   const latestUpdate = [...etfRecords, ...benchmarkRecords]
     .map((row) => row.recorded_at)
     .filter(Boolean)
@@ -282,7 +281,6 @@ function App({ appData }: { appData: NasdaqTrackingData }) {
         <div>
           <h1>纳指跟踪记录</h1>
           <div className="meta">
-            <span className="pill">最新日期：{latestDate}</span>
             <span className="pill">最近更新：{latestUpdate}</span>
           </div>
         </div>

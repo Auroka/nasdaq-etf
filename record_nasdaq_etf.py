@@ -342,7 +342,10 @@ def parse_eastmoney_kline(config: dict, code: str, trade_date: dt.date) -> dict:
     }
 
 
-def downsample_trend_points(points: list[dict], max_points: int = 140) -> list[dict]:
+MAX_TREND_POINTS = 64
+
+
+def downsample_trend_points(points: list[dict], max_points: int = MAX_TREND_POINTS) -> list[dict]:
     # 分钟数据太多会让数据文件膨胀；保留走势形状即可。
     if len(points) <= max_points:
         return points
@@ -368,8 +371,8 @@ def trend_payload(trend_date: dt.date, source_ids: list[str], points: list[dict]
     }
 
 
-def parse_eastmoney_trend(config: dict, code: str, target_date: dt.date) -> dict | None:
-    url = source_url(config, "eastmoney_trend", secid=secid_for_code(code))
+def parse_eastmoney_trend(config: dict, code: str, target_date: dt.date, days: int = 1) -> dict | None:
+    url = source_url(config, "eastmoney_trend", secid=secid_for_code(code), days=str(days))
     data = json.loads(fetch_text(url))
     rows = (data.get("data") or {}).get("trends") or []
     points = []
@@ -1006,6 +1009,49 @@ def build_benchmark_refresh_rows(
     return rows
 
 
+def refresh_missing_trends(
+    config: dict,
+    etf_records: list[dict],
+    benchmark_records: list[dict],
+) -> tuple[int, int]:
+    etf_changed = 0
+    for row in etf_records:
+        points = (row.get("trend") or {}).get("points") or []
+        if row.get("trend") and len(points) <= MAX_TREND_POINTS:
+            continue
+        try:
+            trend = parse_eastmoney_trend(
+                config,
+                row["code"],
+                dt.date.fromisoformat(row["trade_date"]),
+                days=5,
+            )
+        except (RuntimeError, json.JSONDecodeError, ValueError):
+            trend = None
+        if trend:
+            row["trend"] = trend
+            etf_changed += 1
+
+    benchmark_config = {item["symbol"]: item for item in config.get("benchmarks", [])}
+    benchmark_changed = 0
+    for row in benchmark_records:
+        points = (row.get("trend") or {}).get("points") or []
+        if row.get("trend") and len(points) <= MAX_TREND_POINTS:
+            continue
+        item = benchmark_config.get(row.get("symbol"))
+        if not item:
+            continue
+        try:
+            trend = parse_nasdaq_chart(config, item, dt.date.fromisoformat(row["quote_date"]))
+        except (RuntimeError, json.JSONDecodeError, ValueError):
+            trend = None
+        if trend:
+            row["trend"] = trend
+            benchmark_changed += 1
+
+    return etf_changed, benchmark_changed
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
@@ -1016,6 +1062,7 @@ def main() -> int:
     parser.add_argument("--init-only", action="store_true")
     parser.add_argument("--backfill-date")
     parser.add_argument("--refresh-benchmarks", action="store_true")
+    parser.add_argument("--refresh-trends", action="store_true")
     args = parser.parse_args()
 
     path = args.output.resolve()
@@ -1042,6 +1089,17 @@ def main() -> int:
             return 0
         _, benchmark_changed = write_rows(path, data_path, config, [], benchmark_rows)
         print(f"refreshed {benchmark_changed} benchmark rows to {path} and {data_path}")
+        return 0
+
+    if args.refresh_trends:
+        etf_records, benchmark_records = read_records(data_path)
+        etf_changed, benchmark_changed = refresh_missing_trends(config, etf_records, benchmark_records)
+        data_path.write_text(render_data_js(etf_records, benchmark_records, config), encoding="utf-8")
+        path.write_text(render_html(data_path.name), encoding="utf-8")
+        print(
+            f"refreshed {etf_changed} ETF trend rows and {benchmark_changed} benchmark trend rows "
+            f"to {path} and {data_path}"
+        )
         return 0
 
     if args.backfill_date:

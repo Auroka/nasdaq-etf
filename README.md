@@ -85,6 +85,12 @@ python record_nasdaq_etf.py --backfill-date 2026-06-01
 python record_nasdaq_etf.py --refresh-benchmarks
 ```
 
+补已记录数据中的分钟走势：
+
+```powershell
+python record_nasdaq_etf.py --refresh-trends
+```
+
 输出文件：
 
 ```text

@@ -18,5 +18,6 @@
 - 默认使用 UTF-8。
 - 日常自动记录使用 `python record_nasdaq_etf.py`。
 - 补录某天使用 `python record_nasdaq_etf.py --backfill-date YYYY-MM-DD`，会同时补录 ETF 和 QQQ/NDX。
+- 补已记录数据中的分钟走势使用 `python record_nasdaq_etf.py --refresh-trends`。
 - 修改脚本后至少运行 `python -m py_compile record_nasdaq_etf.py`。
 - 修改前端后运行 `npm run typecheck` 和 `npm run build`。
