@@ -62,6 +62,27 @@ export type BenchmarkRecord = {
   trend?: Trend | null;
 };
 
+export type DailyFileEntry = {
+  date: string;
+  file: string;
+  etf_count: number;
+  benchmark_count: number;
+};
+
+export type TrackingManifest = {
+  generated_at: string;
+  etfs: Etf[];
+  benchmarks: Benchmark[];
+  sources: Source[];
+  daily_files: DailyFileEntry[];
+};
+
+export type DailyRecordFile = {
+  date: string;
+  etf_records: EtfRecord[];
+  benchmark_records: BenchmarkRecord[];
+};
+
 export type NasdaqTrackingData = {
   generated_at: string;
   etfs: Etf[];

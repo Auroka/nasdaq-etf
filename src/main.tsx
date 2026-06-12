@@ -1,12 +1,37 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
-import type { BenchmarkRecord, EtfRecord, NasdaqTrackingData, Trend } from "./types";
+import type { BenchmarkRecord, DailyRecordFile, EtfRecord, NasdaqTrackingData, TrackingManifest, Trend } from "./types";
 
 type TabKey = "etfs" | "benchmarks" | "sources";
 
 const fmtNumber = (value: number, digits: number) => Number(value).toFixed(digits);
 const fmtPct = (value: number) => `${(Number(value) * 100).toFixed(2)}%`;
+
+const loadJson = async <T,>(url: string): Promise<T> => {
+  const response = await fetch(url, { cache: "no-cache" });
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+  return response.json() as Promise<T>;
+};
+
+const resolveDataUrl = (baseUrl: string, file: string) => new URL(file, new URL(baseUrl, window.location.href)).toString();
+
+async function loadTrackingData(manifestUrl: string): Promise<NasdaqTrackingData> {
+  const manifest = await loadJson<TrackingManifest>(manifestUrl);
+  // 每日文件按年月目录拆分，页面启动时根据索引合并展示。
+  const dailyFiles = await Promise.all(
+    manifest.daily_files.map((item) => loadJson<DailyRecordFile>(resolveDataUrl(manifestUrl, item.file)))
+  );
+
+  return {
+    generated_at: manifest.generated_at,
+    etfs: manifest.etfs,
+    benchmarks: manifest.benchmarks,
+    sources: manifest.sources,
+    etf_records: dailyFiles.flatMap((file) => file.etf_records),
+    benchmark_records: dailyFiles.flatMap((file) => file.benchmark_records)
+  };
+}
 
 const orderMap = <T extends object>(items: T[], key: keyof T) =>
   new Map(items.map((item, index) => [String(item[key]), index]));
@@ -326,14 +351,9 @@ function Root({ dataUrl }: { dataUrl: string }) {
 
   useEffect(() => {
     let active = true;
-    // GitHub Pages 直接托管 JSON，页面启动时读取最新数据。
-    fetch(dataUrl, { cache: "no-cache" })
-      .then((response) => {
-        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-        return response.json() as Promise<NasdaqTrackingData>;
-      })
-      .then((json) => {
-        if (active) setAppData(json);
+    loadTrackingData(dataUrl)
+      .then((data) => {
+        if (active) setAppData(data);
       })
       .catch((err: Error) => {
         if (active) setError(`数据加载失败：${err.message}`);
@@ -358,5 +378,5 @@ function Root({ dataUrl }: { dataUrl: string }) {
 const root = document.getElementById("root");
 
 if (root) {
-  createRoot(root).render(<Root dataUrl={root.dataset.url ?? "data/nasdaq_etf_daily_data.json"} />);
+  createRoot(root).render(<Root dataUrl={root.dataset.url ?? "data/manifest.json"} />);
 }

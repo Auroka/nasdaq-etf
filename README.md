@@ -60,10 +60,11 @@ data_sources.json
 页面展示用的记录数据单独维护在：
 
 ```text
-data/nasdaq_etf_daily_data.json
+data/manifest.json
+data/daily-records/YYYY/MM/YYYY-MM-DD.json
 ```
 
-HTML 只负责加载这个 JSON 数据文件并填充表格；本地查看时用 HTTP 服务打开，和 GitHub Pages 的运行方式一致。
+HTML 先加载 `manifest.json`，再按索引加载按年月归档的每日 JSON；本地查看时用 HTTP 服务打开，和 GitHub Pages 的运行方式一致。
 
 ## 使用
 
@@ -97,7 +98,8 @@ python record_nasdaq_etf.py --refresh-trends
 index.html
 assets/app.js
 assets/app.css
-data/nasdaq_etf_daily_data.json
+data/manifest.json
+data/daily-records/YYYY/MM/YYYY-MM-DD.json
 ```
 
 前端使用 React + TypeScript，修改页面后构建：
@@ -129,7 +131,8 @@ http://127.0.0.1:5173/
 index.html
 assets/app.js
 assets/app.css
-data/nasdaq_etf_daily_data.json
+data/manifest.json
+data/daily-records/
 ```
 
 GitHub 仓库设置：

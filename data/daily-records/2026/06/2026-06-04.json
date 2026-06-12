@@ -1,0 +1,92 @@
+{
+  "date": "2026-06-04",
+  "etf_records": [
+    {
+      "trade_date": "2026-06-04",
+      "recorded_at": "2026-06-04 16:28:04",
+      "code": "513100",
+      "name": "纳指ETF国泰",
+      "price": 2.24,
+      "daily_change": -0.025699999999999997,
+      "estimate": 2.0808,
+      "premium": 0.0765,
+      "quote_time": "2026-06-04 16:12:02",
+      "estimate_time": "2026-06-03",
+      "source_ids": [
+        "eastmoney_quote",
+        "tinyright_t1"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-06-04",
+      "recorded_at": "2026-06-04 16:28:04",
+      "code": "159501",
+      "name": "纳指ETF嘉实",
+      "price": 2.107,
+      "daily_change": -0.021400000000000002,
+      "estimate": 1.9533,
+      "premium": 0.0787,
+      "quote_time": "2026-06-04 15:34:09",
+      "estimate_time": "2026-06-03",
+      "source_ids": [
+        "eastmoney_quote",
+        "tinyright_t1"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-06-04",
+      "recorded_at": "2026-06-04 16:28:04",
+      "code": "159659",
+      "name": "纳斯达克100ETF招商",
+      "price": 2.354,
+      "daily_change": -0.0216,
+      "estimate": 2.24,
+      "premium": 0.0509,
+      "quote_time": "2026-06-04 15:34:30",
+      "estimate_time": "2026-06-03",
+      "source_ids": [
+        "eastmoney_quote",
+        "tinyright_t1"
+      ],
+      "trend": null
+    }
+  ],
+  "benchmark_records": [
+    {
+      "track_date": "2026-06-05",
+      "recorded_at": "2026-06-11 15:37:52",
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "value": 740.61,
+      "daily_change": -0.004837344297980439,
+      "history_high": 746.16,
+      "drawdown": -0.007438082984882577,
+      "history_high_date": "2026-06-02",
+      "quote_date": "2026-06-04",
+      "unit": "USD",
+      "source_ids": [
+        "nasdaq_api_historical"
+      ],
+      "trend": null
+    },
+    {
+      "track_date": "2026-06-05",
+      "recorded_at": "2026-06-11 15:37:52",
+      "symbol": "NDX",
+      "name": "Nasdaq 100 Index",
+      "value": 30407.81,
+      "daily_change": -0.005345874096045811,
+      "history_high": 30660.6,
+      "drawdown": -0.008244783207112638,
+      "history_high_date": "2026-06-02",
+      "quote_date": "2026-06-04",
+      "unit": "points",
+      "source_ids": [
+        "nasdaq_api_historical"
+      ],
+      "trend": null
+    }
+  ]
+}

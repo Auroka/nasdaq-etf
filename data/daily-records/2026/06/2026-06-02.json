@@ -1,0 +1,57 @@
+{
+  "date": "2026-06-02",
+  "etf_records": [
+    {
+      "trade_date": "2026-06-02",
+      "recorded_at": "2026-06-02 16:53:08",
+      "code": "513100",
+      "name": "国泰纳指100",
+      "price": 2.343,
+      "daily_change": -0.009300000000000001,
+      "estimate": 2.0766,
+      "premium": 0.1283,
+      "quote_time": "2026-06-02 14:59:00",
+      "estimate_time": "2026-06-01",
+      "source_ids": [
+        "tinyright_table",
+        "tinyright_t1"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-06-02",
+      "recorded_at": "2026-06-02 16:53:08",
+      "code": "159501",
+      "name": "嘉实纳指100",
+      "price": 2.185,
+      "daily_change": -0.0068000000000000005,
+      "estimate": 1.9494,
+      "premium": 0.1209,
+      "quote_time": "2026-06-02 14:59:00",
+      "estimate_time": "2026-06-01",
+      "source_ids": [
+        "tinyright_table",
+        "tinyright_t1"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-06-02",
+      "recorded_at": "2026-06-02 16:53:08",
+      "code": "159659",
+      "name": "招商纳指100",
+      "price": 2.441,
+      "daily_change": -0.013300000000000001,
+      "estimate": 2.2353,
+      "premium": 0.092,
+      "quote_time": "2026-06-02 14:59:00",
+      "estimate_time": "2026-06-01",
+      "source_ids": [
+        "tinyright_table",
+        "tinyright_t1"
+      ],
+      "trend": null
+    }
+  ],
+  "benchmark_records": []
+}

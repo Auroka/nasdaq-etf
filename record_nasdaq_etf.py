@@ -18,8 +18,10 @@ from urllib.request import Request, urlopen
 APP_DIR = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = APP_DIR / "index.html"
 DATA_DIR = APP_DIR / "data"
-DEFAULT_DATA_OUTPUT = DATA_DIR / "nasdaq_etf_daily_data.json"
-LEGACY_DATA_OUTPUT = APP_DIR / "nasdaq_etf_daily_data.js"
+DEFAULT_DATA_OUTPUT = DATA_DIR / "manifest.json"
+DAILY_RECORDS_DIR_NAME = "daily-records"
+LEGACY_JSON_OUTPUT = DATA_DIR / "nasdaq_etf_daily_data.json"
+LEGACY_JS_OUTPUT = APP_DIR / "nasdaq_etf_daily_data.js"
 DEFAULT_SOURCE_CONFIG = APP_DIR / "data_sources.json"
 TZ = dt.timezone(dt.timedelta(hours=8), "Asia/Shanghai")
 
@@ -817,29 +819,54 @@ def normalize_benchmark_record(row: dict) -> dict:
 def data_path_for_html(path: Path) -> Path:
     if path == DEFAULT_OUTPUT:
         return DEFAULT_DATA_OUTPUT
-    return path.with_name(f"{path.stem}_data.json")
+    return path.with_name(f"{path.stem}_manifest.json")
+
+
+def load_json_or_legacy_js(path: Path) -> dict:
+    content = path.read_text(encoding="utf-8")
+    if path.suffix.lower() == ".json":
+        return json.loads(content)
+
+    match = re.search(
+        r"window\.NASDAQ_TRACKING_DATA\s*=\s*(\{.*\})\s*;?\s*$",
+        content,
+        re.S,
+    )
+    if not match:
+        raise ValueError(f"unsupported data file: {path}")
+    return json.loads(match.group(1))
+
+
+def read_manifest_payload(path: Path, manifest: dict) -> dict:
+    etf_records: list[dict] = []
+    benchmark_records: list[dict] = []
+    for item in manifest.get("daily_files", []):
+        daily_path = path.parent / item["file"]
+        if not daily_path.exists():
+            raise FileNotFoundError(f"missing daily data file: {daily_path}")
+        daily_data = json.loads(daily_path.read_text(encoding="utf-8"))
+        etf_records.extend(daily_data.get("etf_records", []))
+        benchmark_records.extend(daily_data.get("benchmark_records", []))
+
+    payload = dict(manifest)
+    payload["etf_records"] = etf_records
+    payload["benchmark_records"] = benchmark_records
+    return payload
 
 
 def read_data_file(path: Path) -> dict | None:
     candidates = [path]
     if path == DEFAULT_DATA_OUTPUT and not path.exists():
-        candidates.append(LEGACY_DATA_OUTPUT)
+        candidates.extend([LEGACY_JSON_OUTPUT, LEGACY_JS_OUTPUT])
 
     for candidate in candidates:
         if not candidate.exists():
             continue
 
-        content = candidate.read_text(encoding="utf-8")
-        if candidate.suffix.lower() == ".json":
-            return json.loads(content)
-
-        match = re.search(
-            r"window\.NASDAQ_TRACKING_DATA\s*=\s*(\{.*\})\s*;?\s*$",
-            content,
-            re.S,
-        )
-        if match:
-            return json.loads(match.group(1))
+        data = load_json_or_legacy_js(candidate)
+        if "daily_files" in data:
+            return read_manifest_payload(candidate, data)
+        return data
 
     return None
 
@@ -869,21 +896,54 @@ def sort_benchmark_records(records: list[dict], symbols: tuple[str, ...]) -> lis
     return sorted(
         records,
         key=lambda row: (
-            str(row.get("track_date", "")),
+            str(row.get("quote_date", "")),
             -(symbols.index(row["symbol"]) if row.get("symbol") in symbols else 99),
         ),
         reverse=True,
     )
 
 
-def render_data_json(etf_records: list[dict], benchmark_records: list[dict], config: dict) -> str:
+def daily_record_relative_path(date_text: str) -> Path:
+    year, month, _ = date_text.split("-")
+    return Path(DAILY_RECORDS_DIR_NAME) / year / month / f"{date_text}.json"
+
+
+def split_daily_records(etf_records: list[dict], benchmark_records: list[dict], config: dict) -> dict[str, dict]:
+    days: dict[str, dict] = {}
+    for row in sort_etf_records(etf_records, etf_codes(config)):
+        days.setdefault(row["trade_date"], {"etf_records": [], "benchmark_records": []})["etf_records"].append(row)
+    for row in sort_benchmark_records(benchmark_records, benchmark_symbols(config)):
+        days.setdefault(row["quote_date"], {"etf_records": [], "benchmark_records": []})["benchmark_records"].append(row)
+    return dict(sorted(days.items(), reverse=True))
+
+
+def render_daily_json(date_text: str, records: dict) -> str:
+    return json.dumps(
+        {
+            "date": date_text,
+            "etf_records": records["etf_records"],
+            "benchmark_records": records["benchmark_records"],
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+def render_manifest_json(daily_records: dict[str, dict], config: dict) -> str:
     payload = {
         "generated_at": dt.datetime.now(TZ).strftime("%Y-%m-%d %H:%M:%S"),
         "etfs": config.get("etfs", []),
         "benchmarks": config.get("benchmarks", []),
         "sources": config.get("sources", []),
-        "etf_records": sort_etf_records(etf_records, etf_codes(config)),
-        "benchmark_records": sort_benchmark_records(benchmark_records, benchmark_symbols(config)),
+        "daily_files": [
+            {
+                "date": date_text,
+                "file": daily_record_relative_path(date_text).as_posix(),
+                "etf_count": len(records["etf_records"]),
+                "benchmark_count": len(records["benchmark_records"]),
+            }
+            for date_text, records in daily_records.items()
+        ],
     }
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
@@ -912,6 +972,31 @@ def render_html(data_url: str) -> str:
 </body>
 </html>
 """
+
+
+def write_data_files(
+    data_path: Path,
+    config: dict,
+    etf_records: list[dict],
+    benchmark_records: list[dict],
+) -> None:
+    daily_records = split_daily_records(etf_records, benchmark_records, config)
+    for date_text, records in daily_records.items():
+        daily_path = data_path.parent / daily_record_relative_path(date_text)
+        daily_path.parent.mkdir(parents=True, exist_ok=True)
+        daily_path.write_text(render_daily_json(date_text, records), encoding="utf-8")
+    data_path.write_text(render_manifest_json(daily_records, config), encoding="utf-8")
+
+
+def write_page_and_data(
+    path: Path,
+    data_path: Path,
+    config: dict,
+    etf_records: list[dict],
+    benchmark_records: list[dict],
+) -> None:
+    write_data_files(data_path, config, etf_records, benchmark_records)
+    path.write_text(render_html(relative_web_path(path, data_path)), encoding="utf-8")
 
 
 def upsert_records(records: list[dict], rows: list[dict], key_fields: tuple[str, ...]) -> int:
@@ -950,11 +1035,10 @@ def write_rows(
     benchmark_changed = upsert_records(
         benchmark_records,
         [public_benchmark_row(row) for row in benchmark_rows or []],
-        ("track_date", "symbol"),
+        ("quote_date", "symbol"),
     )
 
-    data_path.write_text(render_data_json(etf_records, benchmark_records, config), encoding="utf-8")
-    path.write_text(render_html(relative_web_path(path, data_path)), encoding="utf-8")
+    write_page_and_data(path, data_path, config, etf_records, benchmark_records)
     return etf_changed, benchmark_changed
 
 
@@ -1112,8 +1196,7 @@ def main() -> int:
     if args.refresh_trends:
         etf_records, benchmark_records = read_records(data_path)
         etf_changed, benchmark_changed = refresh_missing_trends(config, etf_records, benchmark_records)
-        data_path.write_text(render_data_json(etf_records, benchmark_records, config), encoding="utf-8")
-        path.write_text(render_html(relative_web_path(path, data_path)), encoding="utf-8")
+        write_page_and_data(path, data_path, config, etf_records, benchmark_records)
         print(
             f"refreshed {etf_changed} ETF trend rows and {benchmark_changed} benchmark trend rows "
             f"to {path} and {data_path}"
