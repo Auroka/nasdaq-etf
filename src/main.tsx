@@ -1,11 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import type { BenchmarkRecord, EtfRecord, NasdaqTrackingData, Trend } from "./types";
 
 type TabKey = "etfs" | "benchmarks" | "sources";
-
-const data = window.NASDAQ_TRACKING_DATA;
 
 const fmtNumber = (value: number, digits: number) => Number(value).toFixed(digits);
 const fmtPct = (value: number) => `${(Number(value) * 100).toFixed(2)}%`;
@@ -322,16 +320,43 @@ function App({ appData }: { appData: NasdaqTrackingData }) {
   );
 }
 
+function Root({ dataUrl }: { dataUrl: string }) {
+  const [appData, setAppData] = useState<NasdaqTrackingData | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    // GitHub Pages 直接托管 JSON，页面启动时读取最新数据。
+    fetch(dataUrl, { cache: "no-cache" })
+      .then((response) => {
+        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+        return response.json() as Promise<NasdaqTrackingData>;
+      })
+      .then((json) => {
+        if (active) setAppData(json);
+      })
+      .catch((err: Error) => {
+        if (active) setError(`数据加载失败：${err.message}`);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [dataUrl]);
+
+  if (error) {
+    return <main><div className="error">{error}</div></main>;
+  }
+
+  if (!appData) {
+    return <main><div className="error">数据加载中...</div></main>;
+  }
+
+  return <App appData={appData} />;
+}
+
 const root = document.getElementById("root");
 
 if (root) {
-  createRoot(root).render(
-    data ? (
-      <App appData={data} />
-    ) : (
-      <main>
-        <div className="error">未加载到 nasdaq_etf_daily_data.js，请确认该文件和 HTML 在同一目录。</div>
-      </main>
-    )
-  );
+  createRoot(root).render(<Root dataUrl={root.dataset.url ?? "data/nasdaq_etf_daily_data.json"} />);
 }

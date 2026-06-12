@@ -29,8 +29,7 @@ await writeFile(
   <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
-  <div id="root"></div>
-  <script src="nasdaq_etf_daily_data.js"></script>
+  <div id="root" data-url="data/nasdaq_etf_daily_data.json"></div>
   <script type="module" src="assets/app.js"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
-window.NASDAQ_TRACKING_DATA = {
-  "generated_at": "2026-06-12 10:07:57",
+{
+  "generated_at": "2026-06-12 10:25:43",
   "etfs": [
     {
       "code": "513100",
@@ -3889,4 +3889,4 @@ window.NASDAQ_TRACKING_DATA = {
       "trend": null
     }
   ]
-};
+}

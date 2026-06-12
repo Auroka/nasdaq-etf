@@ -70,9 +70,3 @@ export type NasdaqTrackingData = {
   etf_records: EtfRecord[];
   benchmark_records: BenchmarkRecord[];
 };
-
-declare global {
-  interface Window {
-    NASDAQ_TRACKING_DATA?: NasdaqTrackingData;
-  }
-}

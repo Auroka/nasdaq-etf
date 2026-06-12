@@ -4,6 +4,7 @@ import argparse
 import datetime as dt
 import html
 import json
+import os
 import re
 import sys
 import time
@@ -16,7 +17,9 @@ from urllib.request import Request, urlopen
 
 APP_DIR = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = APP_DIR / "index.html"
-DEFAULT_DATA_OUTPUT = APP_DIR / "nasdaq_etf_daily_data.js"
+DATA_DIR = APP_DIR / "data"
+DEFAULT_DATA_OUTPUT = DATA_DIR / "nasdaq_etf_daily_data.json"
+LEGACY_DATA_OUTPUT = APP_DIR / "nasdaq_etf_daily_data.js"
 DEFAULT_SOURCE_CONFIG = APP_DIR / "data_sources.json"
 TZ = dt.timezone(dt.timedelta(hours=8), "Asia/Shanghai")
 
@@ -814,21 +817,31 @@ def normalize_benchmark_record(row: dict) -> dict:
 def data_path_for_html(path: Path) -> Path:
     if path == DEFAULT_OUTPUT:
         return DEFAULT_DATA_OUTPUT
-    return path.with_name(f"{path.stem}_data.js")
+    return path.with_name(f"{path.stem}_data.json")
 
 
 def read_data_file(path: Path) -> dict | None:
-    if not path.exists():
-        return None
-    content = path.read_text(encoding="utf-8")
-    match = re.search(
-        r"window\.NASDAQ_TRACKING_DATA\s*=\s*(\{.*\})\s*;?\s*$",
-        content,
-        re.S,
-    )
-    if not match:
-        return None
-    return json.loads(match.group(1))
+    candidates = [path]
+    if path == DEFAULT_DATA_OUTPUT and not path.exists():
+        candidates.append(LEGACY_DATA_OUTPUT)
+
+    for candidate in candidates:
+        if not candidate.exists():
+            continue
+
+        content = candidate.read_text(encoding="utf-8")
+        if candidate.suffix.lower() == ".json":
+            return json.loads(content)
+
+        match = re.search(
+            r"window\.NASDAQ_TRACKING_DATA\s*=\s*(\{.*\})\s*;?\s*$",
+            content,
+            re.S,
+        )
+        if match:
+            return json.loads(match.group(1))
+
+    return None
 
 
 def read_records(data_path: Path) -> tuple[list[dict], list[dict]]:
@@ -863,7 +876,7 @@ def sort_benchmark_records(records: list[dict], symbols: tuple[str, ...]) -> lis
     )
 
 
-def render_data_js(etf_records: list[dict], benchmark_records: list[dict], config: dict) -> str:
+def render_data_json(etf_records: list[dict], benchmark_records: list[dict], config: dict) -> str:
     payload = {
         "generated_at": dt.datetime.now(TZ).strftime("%Y-%m-%d %H:%M:%S"),
         "etfs": config.get("etfs", []),
@@ -872,12 +885,18 @@ def render_data_js(etf_records: list[dict], benchmark_records: list[dict], confi
         "etf_records": sort_etf_records(etf_records, etf_codes(config)),
         "benchmark_records": sort_benchmark_records(benchmark_records, benchmark_symbols(config)),
     }
-    data_json = json.dumps(payload, ensure_ascii=False, indent=2).replace("</", "<\\/")
-    return f"window.NASDAQ_TRACKING_DATA = {data_json};\n"
+    return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
-def render_html(data_file_name: str) -> str:
-    data_file = html.escape(data_file_name, quote=True)
+def relative_web_path(page_path: Path, asset_path: Path) -> str:
+    try:
+        return Path(os.path.relpath(asset_path, page_path.parent)).as_posix()
+    except ValueError:
+        return asset_path.name
+
+
+def render_html(data_url: str) -> str:
+    escaped_data_url = html.escape(data_url, quote=True)
     # Python 只负责数据和页面壳，具体界面交给 React。
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -888,8 +907,7 @@ def render_html(data_file_name: str) -> str:
   <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
-  <div id="root"></div>
-  <script src="{data_file}"></script>
+  <div id="root" data-url="{escaped_data_url}"></div>
   <script type="module" src="assets/app.js"></script>
 </body>
 </html>
@@ -935,8 +953,8 @@ def write_rows(
         ("track_date", "symbol"),
     )
 
-    data_path.write_text(render_data_js(etf_records, benchmark_records, config), encoding="utf-8")
-    path.write_text(render_html(data_path.name), encoding="utf-8")
+    data_path.write_text(render_data_json(etf_records, benchmark_records, config), encoding="utf-8")
+    path.write_text(render_html(relative_web_path(path, data_path)), encoding="utf-8")
     return etf_changed, benchmark_changed
 
 
@@ -1094,8 +1112,8 @@ def main() -> int:
     if args.refresh_trends:
         etf_records, benchmark_records = read_records(data_path)
         etf_changed, benchmark_changed = refresh_missing_trends(config, etf_records, benchmark_records)
-        data_path.write_text(render_data_js(etf_records, benchmark_records, config), encoding="utf-8")
-        path.write_text(render_html(data_path.name), encoding="utf-8")
+        data_path.write_text(render_data_json(etf_records, benchmark_records, config), encoding="utf-8")
+        path.write_text(render_html(relative_web_path(path, data_path)), encoding="utf-8")
         print(
             f"refreshed {etf_changed} ETF trend rows and {benchmark_changed} benchmark trend rows "
             f"to {path} and {data_path}"
