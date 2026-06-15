@@ -608,7 +608,9 @@ def yahoo_etf_symbol(code: str) -> str:
 
 
 def yahoo_intraday_enabled() -> bool:
-    return os.environ.get("NASDAQ_ETF_ENABLE_YAHOO_INTRADAY") == "1"
+    # Yahoo is only used after the primary trend source fails. Keep it on by default
+    # so automated runs still get intraday trends when Eastmoney or Nasdaq drops a request.
+    return os.environ.get("NASDAQ_ETF_ENABLE_YAHOO_INTRADAY") != "0"
 
 
 def parse_etf_trend(config: dict, code: str, target_date: dt.date) -> dict | None:

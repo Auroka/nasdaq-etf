@@ -109,6 +109,8 @@ python record_nasdaq_etf.py --backfill-benchmark-date 2026-06-12
 python record_nasdaq_etf.py --refresh-trends
 ```
 
+Yahoo 分钟走势兜底默认开启；如需临时关闭，设置 `NASDAQ_ETF_ENABLE_YAHOO_INTRADAY=0`。
+
 如果 Python 客户端被 Yahoo Finance 拦截导致历史分钟走势无法补齐，在当前 PowerShell 会话中执行兜底脚本：
 
 ```powershell
