@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-12 15:19:34",
+  "generated_at": "2026-06-15 15:21:04",
   "etfs": [
     {
       "code": "513100",
@@ -76,6 +76,12 @@
       "url_template": "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=30y&interval=1d&includePrePost=false&events=history"
     },
     {
+      "id": "yahoo_intraday_chart",
+      "name": "Yahoo Finance 分钟行情",
+      "purpose": "东方财富或 Nasdaq 分钟走势不可用时，作为 ETF、QQQ 和 NDX 历史分钟走势备用源",
+      "url_template": "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?period1={period1}&period2={period2}&interval={interval}&includePrePost=false&events=history"
+    },
+    {
       "id": "nasdaq_api_historical",
       "name": "Nasdaq 官方历史行情",
       "purpose": "默认获取 QQQ 和 NDX 的目标日收盘价、当天涨幅、历史最高收盘点/价和回撤",
@@ -102,10 +108,16 @@
   ],
   "daily_files": [
     {
+      "date": "2026-06-15",
+      "file": "daily-records/2026/06/2026-06-15.json",
+      "etf_count": 3,
+      "benchmark_count": 0
+    },
+    {
       "date": "2026-06-12",
       "file": "daily-records/2026/06/2026-06-12.json",
       "etf_count": 3,
-      "benchmark_count": 0
+      "benchmark_count": 2
     },
     {
       "date": "2026-06-11",
@@ -147,19 +159,19 @@
       "date": "2026-06-03",
       "file": "daily-records/2026/06/2026-06-03.json",
       "etf_count": 3,
-      "benchmark_count": 0
+      "benchmark_count": 2
     },
     {
       "date": "2026-06-02",
       "file": "daily-records/2026/06/2026-06-02.json",
       "etf_count": 3,
-      "benchmark_count": 0
+      "benchmark_count": 2
     },
     {
       "date": "2026-06-01",
       "file": "daily-records/2026/06/2026-06-01.json",
       "etf_count": 3,
-      "benchmark_count": 0
+      "benchmark_count": 2
     }
   ]
 }

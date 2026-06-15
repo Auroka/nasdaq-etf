@@ -26,7 +26,10 @@
 - 默认使用 UTF-8。
 - 日常自动记录使用 `python record_nasdaq_etf.py`。
 - 补录某天使用 `python record_nasdaq_etf.py --backfill-date YYYY-MM-DD`，会同时补录 ETF 和 QQQ/NDX。
+- 刷新并补齐已记录 ETF 交易日对应的 QQQ/NDX 使用 `python record_nasdaq_etf.py --refresh-benchmarks`。
+- 只补某个美股行情日的 QQQ/NDX 使用 `python record_nasdaq_etf.py --backfill-benchmark-date YYYY-MM-DD`，默认跟踪日期为该行情日后的下一个工作日。
 - 补已记录数据中的分钟走势使用 `python record_nasdaq_etf.py --refresh-trends`。
+- Python 客户端被 Yahoo Finance 拦截时，历史分钟走势在当前 PowerShell 会话中用 `& .\scripts\refresh_yahoo_intraday_trends.ps1` 兜底补齐。
 - 修改脚本后至少运行 `python -m py_compile record_nasdaq_etf.py`。
 - 修改前端后运行 `npm run typecheck` 和 `npm run build`。
 - 本地查看使用 `python -m http.server 5173`，访问 `http://127.0.0.1:5173/`。

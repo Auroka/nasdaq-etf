@@ -43,6 +43,12 @@
       "url_template": "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=30y&interval=1d&includePrePost=false&events=history"
     },
     {
+      "id": "yahoo_intraday_chart",
+      "name": "Yahoo Finance 分钟行情",
+      "purpose": "东方财富或 Nasdaq 分钟走势不可用时，作为 ETF、QQQ 和 NDX 历史分钟走势备用源",
+      "url_template": "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?period1={period1}&period2={period2}&interval={interval}&includePrePost=false&events=history"
+    },
+    {
       "id": "nasdaq_api_historical",
       "name": "Nasdaq 官方历史行情",
       "purpose": "默认获取 QQQ 和 NDX 的目标日收盘价、当天涨幅、历史最高收盘点/价和回撤",

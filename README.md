@@ -91,16 +91,28 @@ python record_nasdaq_etf.py
 python record_nasdaq_etf.py --backfill-date 2026-06-01
 ```
 
-只刷新已记录的 QQQ/NDX 回撤口径：
+刷新并补齐已记录 ETF 交易日对应的 QQQ/NDX 回撤口径：
 
 ```powershell
 python record_nasdaq_etf.py --refresh-benchmarks
 ```
 
-补已记录数据中的分钟走势：
+只补某个美股行情日的 QQQ/NDX：
+
+```powershell
+python record_nasdaq_etf.py --backfill-benchmark-date 2026-06-12
+```
+
+补已记录数据中的分钟走势；东方财富或 Nasdaq 分钟走势不可用时，会用 Yahoo Finance 历史分钟行情兜底：
 
 ```powershell
 python record_nasdaq_etf.py --refresh-trends
+```
+
+如果 Python 客户端被 Yahoo Finance 拦截导致历史分钟走势无法补齐，在当前 PowerShell 会话中执行兜底脚本：
+
+```powershell
+& .\scripts\refresh_yahoo_intraday_trends.ps1
 ```
 
 输出文件：

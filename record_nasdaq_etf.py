@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import datetime as dt
 import html
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 from http.client import RemoteDisconnected
 from pathlib import Path
@@ -101,6 +105,13 @@ def fetch_text(url: str) -> str:
                 "Referer": "https://www.nasdaq.com/",
             }
         )
+    if "query1.finance.yahoo.com" in url:
+        headers.update(
+            {
+                "Accept": "application/json, text/plain, */*",
+                "Referer": "https://finance.yahoo.com/",
+            }
+        )
     req = Request(
         url,
         headers=headers,
@@ -113,9 +124,53 @@ def fetch_text(url: str) -> str:
                 return res.read().decode(charset, "replace")
         except (HTTPError, URLError, TimeoutError, OSError, RemoteDisconnected) as exc:
             last_error = exc
+            if (
+                "query1.finance.yahoo.com" in url
+                and isinstance(exc, HTTPError)
+                and exc.code == 403
+            ):
+                return fetch_text_with_powershell(url)
             if attempt < 2:
                 time.sleep(1 + attempt)
     raise RuntimeError(f"request failed after retries: {url}: {last_error}")
+
+
+def fetch_text_with_powershell(url: str) -> str:
+    executable = shutil.which("powershell.exe") or shutil.which("pwsh")
+    if not executable:
+        raise RuntimeError("Yahoo request was blocked and PowerShell fallback is unavailable")
+
+    # Yahoo sometimes blocks Python urllib on Windows while accepting the same URL via WinHTTP/.NET.
+    command = (
+        "$ProgressPreference='SilentlyContinue'; "
+        "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; "
+        "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; "
+        "Invoke-WebRequest -Uri $env:NASDAQ_ETF_FETCH_URL -UseBasicParsing "
+        "-Headers @{ 'User-Agent' = 'Mozilla/5.0' } -OutFile $env:NASDAQ_ETF_FETCH_OUTPUT"
+    )
+    encoded_command = base64.b64encode(command.encode("utf-16le")).decode("ascii")
+    env = dict(os.environ)
+    env["NASDAQ_ETF_FETCH_URL"] = url
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        output_path = Path(tmp.name)
+    env["NASDAQ_ETF_FETCH_OUTPUT"] = str(output_path)
+    try:
+        result = subprocess.run(
+            [executable, "-NoProfile", "-EncodedCommand", encoded_command],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env=env,
+            timeout=45,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(f"PowerShell Yahoo fallback failed: {result.stderr.strip()}")
+        return output_path.read_text(encoding="utf-8-sig")
+    finally:
+        output_path.unlink(missing_ok=True)
 
 
 def extract_json_array(text: str, key: str) -> list[dict]:
@@ -511,6 +566,81 @@ def parse_nasdaq_chart(config: dict, item: dict, target_date: dt.date) -> dict |
     return trend_payload(target_date, ["nasdaq_api_chart"], points)
 
 
+def parse_yahoo_intraday_trend(config: dict, symbol: str, target_date: dt.date) -> dict | None:
+    start = dt.datetime.combine(target_date - dt.timedelta(days=1), dt.time.min, tzinfo=dt.timezone.utc)
+    end = dt.datetime.combine(target_date + dt.timedelta(days=2), dt.time.min, tzinfo=dt.timezone.utc)
+    url = source_url(
+        config,
+        "yahoo_intraday_chart",
+        symbol=quote(symbol, safe=""),
+        period1=str(int(start.timestamp())),
+        period2=str(int(end.timestamp())),
+        interval="5m",
+    )
+    data = json.loads(fetch_text(url))
+    chart = data.get("chart", {})
+    if chart.get("error"):
+        raise RuntimeError(f"{symbol} yahoo intraday error: {chart['error']}")
+
+    result = (chart.get("result") or [None])[0]
+    if not result:
+        return None
+
+    timestamps = result.get("timestamp") or []
+    quote_rows = (result.get("indicators", {}).get("quote") or [{}])[0]
+    closes = quote_rows.get("close") or []
+    gmtoffset = int((result.get("meta") or {}).get("gmtoffset") or 0)
+    points = []
+    for index, ts in enumerate(timestamps):
+        close = as_float(closes[index] if index < len(closes) else None)
+        if close is None:
+            continue
+        local_time = dt.datetime.fromtimestamp(int(ts), dt.timezone.utc) + dt.timedelta(seconds=gmtoffset)
+        if local_time.date() != target_date:
+            continue
+        points.append({"time": local_time.strftime("%H:%M"), "value": close})
+    return trend_payload(target_date, ["yahoo_intraday_chart"], points)
+
+
+def yahoo_etf_symbol(code: str) -> str:
+    suffix = "SS" if code.startswith("5") else "SZ"
+    return f"{code}.{suffix}"
+
+
+def yahoo_intraday_enabled() -> bool:
+    return os.environ.get("NASDAQ_ETF_ENABLE_YAHOO_INTRADAY") == "1"
+
+
+def parse_etf_trend(config: dict, code: str, target_date: dt.date) -> dict | None:
+    try:
+        trend = parse_eastmoney_trend(config, code, target_date, days=5)
+    except (RuntimeError, json.JSONDecodeError, ValueError):
+        trend = None
+    if trend:
+        return trend
+    if not yahoo_intraday_enabled():
+        return None
+    try:
+        return parse_yahoo_intraday_trend(config, yahoo_etf_symbol(code), target_date)
+    except (RuntimeError, json.JSONDecodeError, ValueError):
+        return None
+
+
+def parse_benchmark_trend(config: dict, item: dict, target_date: dt.date) -> dict | None:
+    try:
+        trend = parse_nasdaq_chart(config, item, target_date)
+    except (RuntimeError, json.JSONDecodeError, ValueError):
+        trend = None
+    if trend:
+        return trend
+    if not yahoo_intraday_enabled():
+        return None
+    try:
+        return parse_yahoo_intraday_trend(config, item.get("yahoo_symbol") or item["symbol"], target_date)
+    except (RuntimeError, json.JSONDecodeError, ValueError):
+        return None
+
+
 def parse_benchmark_history(config: dict, item: dict, target_date: dt.date | None = None) -> dict:
     symbol = item["yahoo_symbol"]
     source_ids: set[str] = set()
@@ -605,6 +735,13 @@ def benchmark_target_date_for_track_date(track_date: dt.date) -> dt.date:
     return track_date - dt.timedelta(days=1)
 
 
+def next_weekday(date_value: dt.date) -> dt.date:
+    next_date = date_value + dt.timedelta(days=1)
+    while next_date.weekday() >= 5:
+        next_date += dt.timedelta(days=1)
+    return next_date
+
+
 def build_etf_rows(config: dict, now: dt.datetime) -> list[dict]:
     codes = etf_codes(config)
     tinyright = parse_tinyright(config, codes)
@@ -639,10 +776,7 @@ def build_etf_rows(config: dict, now: dt.datetime) -> list[dict]:
             premium = price / estimate - 1
         source_ids = ["eastmoney_quote", "tinyright_t1"] if quote_row else ["tinyright_table", "tinyright_t1"]
         trade_date = (q_time or now).date()
-        try:
-            trend = parse_eastmoney_trend(config, code, trade_date)
-        except (RuntimeError, json.JSONDecodeError, ValueError):
-            trend = None
+        trend = parse_etf_trend(config, code, trade_date)
 
         rows.append(
             {
@@ -726,28 +860,43 @@ def build_backfill_etf_rows(
     return rows
 
 
+def trend_matches_date(trend: dict | None, date_value: dt.date) -> bool:
+    if not trend or not (trend.get("points") or []):
+        return False
+    return trend.get("date") == date_value.isoformat()
+
+
+def build_benchmark_row(
+    config: dict,
+    item: dict,
+    track_date: dt.date,
+    now: dt.datetime,
+    target_date: dt.date | None = None,
+    existing_trend: dict | None = None,
+    include_trend: bool = True,
+) -> dict:
+    quote_row = parse_benchmark_history(config, item, target_date)
+    trend = existing_trend if trend_matches_date(existing_trend, quote_row["quote_date"]) else None
+    if include_trend and not trend:
+        trend = parse_benchmark_trend(config, item, quote_row["quote_date"])
+    return {
+        "track_date": track_date,
+        "recorded_at": now.strftime("%Y-%m-%d %H:%M:%S"),
+        **quote_row,
+        "trend": trend,
+    }
+
+
 def build_benchmark_rows(
     config: dict,
     track_date: dt.date,
     now: dt.datetime,
     target_date: dt.date | None = None,
 ) -> list[dict]:
-    rows = []
-    for item in config.get("benchmarks", []):
-        quote_row = parse_benchmark_history(config, item, target_date)
-        try:
-            trend = parse_nasdaq_chart(config, item, quote_row["quote_date"])
-        except (RuntimeError, json.JSONDecodeError, ValueError):
-            trend = None
-        rows.append(
-            {
-                "track_date": track_date,
-                "recorded_at": now.strftime("%Y-%m-%d %H:%M:%S"),
-                **quote_row,
-                "trend": trend,
-            }
-        )
-    return rows
+    return [
+        build_benchmark_row(config, item, track_date, now, target_date)
+        for item in config.get("benchmarks", [])
+    ]
 
 
 def public_etf_row(item: dict) -> dict:
@@ -1089,26 +1238,89 @@ def build_backfill_rows(
 
 def build_benchmark_refresh_rows(
     config: dict,
+    etf_records: list[dict],
     benchmark_records: list[dict],
     now: dt.datetime,
 ) -> list[dict]:
     benchmarks = {item["symbol"]: item for item in config.get("benchmarks", [])}
     rows = []
+    daily_dates = {
+        str(row.get("trade_date"))
+        for row in etf_records
+        if row.get("trade_date")
+    } | {
+        str(row.get("quote_date"))
+        for row in benchmark_records
+        if row.get("quote_date")
+    }
+    existing_track_keys = set()
+    existing_quote_keys = set()
+
     for record in benchmark_records:
         item = benchmarks.get(record.get("symbol"))
         if not item:
             continue
         track_date = dt.date.fromisoformat(record["track_date"])
         target_date = benchmark_target_date_for_track_date(track_date)
-        quote_row = parse_benchmark_history(config, item, target_date)
-        rows.append(
-            {
-                "track_date": track_date,
-                "recorded_at": now.strftime("%Y-%m-%d %H:%M:%S"),
-                **quote_row,
-            }
+        row = build_benchmark_row(
+            config,
+            item,
+            track_date,
+            now,
+            target_date,
+            existing_trend=record.get("trend"),
+            include_trend=False,
         )
+        quote_date = row["quote_date"].isoformat()
+        rows.append(row)
+        existing_track_keys.add((track_date.isoformat(), item["symbol"]))
+        existing_quote_keys.add((quote_date, item["symbol"]))
+
+    for track_date_text in sorted({str(row.get("trade_date")) for row in etf_records if row.get("trade_date")}):
+        track_date = dt.date.fromisoformat(track_date_text)
+        target_date = benchmark_target_date_for_track_date(track_date)
+        for item in config.get("benchmarks", []):
+            symbol = item["symbol"]
+            if (track_date_text, symbol) in existing_track_keys:
+                continue
+            row = build_benchmark_row(
+                config,
+                item,
+                track_date,
+                now,
+                target_date,
+                include_trend=False,
+            )
+            quote_date = row["quote_date"].isoformat()
+            quote_key = (quote_date, symbol)
+            # 只补当前数据集中已有日期的缺口，避免周末/节假日推导出新的孤立历史文件。
+            if quote_date not in daily_dates or quote_key in existing_quote_keys:
+                continue
+            rows.append(row)
+            existing_track_keys.add((track_date_text, symbol))
+            existing_quote_keys.add(quote_key)
+
     return rows
+
+
+def build_benchmark_quote_date_rows(
+    config: dict,
+    quote_date: dt.date,
+    now: dt.datetime,
+    track_date: dt.date | None = None,
+) -> list[dict]:
+    track_date = track_date or next_weekday(quote_date)
+    return [
+        build_benchmark_row(
+            config,
+            item,
+            track_date,
+            now,
+            target_date=quote_date,
+            include_trend=False,
+        )
+        for item in config.get("benchmarks", [])
+    ]
 
 
 def refresh_missing_trends(
@@ -1121,15 +1333,11 @@ def refresh_missing_trends(
         points = (row.get("trend") or {}).get("points") or []
         if row.get("trend") and len(points) <= MAX_TREND_POINTS:
             continue
-        try:
-            trend = parse_eastmoney_trend(
-                config,
-                row["code"],
-                dt.date.fromisoformat(row["trade_date"]),
-                days=5,
-            )
-        except (RuntimeError, json.JSONDecodeError, ValueError):
-            trend = None
+        trend = parse_etf_trend(
+            config,
+            row["code"],
+            dt.date.fromisoformat(row["trade_date"]),
+        )
         if trend:
             row["trend"] = trend
             etf_changed += 1
@@ -1143,10 +1351,7 @@ def refresh_missing_trends(
         item = benchmark_config.get(row.get("symbol"))
         if not item:
             continue
-        try:
-            trend = parse_nasdaq_chart(config, item, dt.date.fromisoformat(row["quote_date"]))
-        except (RuntimeError, json.JSONDecodeError, ValueError):
-            trend = None
+        trend = parse_benchmark_trend(config, item, dt.date.fromisoformat(row["quote_date"]))
         if trend:
             row["trend"] = trend
             benchmark_changed += 1
@@ -1163,6 +1368,8 @@ def main() -> int:
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--init-only", action="store_true")
     parser.add_argument("--backfill-date")
+    parser.add_argument("--backfill-benchmark-date")
+    parser.add_argument("--track-date")
     parser.add_argument("--refresh-benchmarks", action="store_true")
     parser.add_argument("--refresh-trends", action="store_true")
     args = parser.parse_args()
@@ -1181,8 +1388,8 @@ def main() -> int:
 
     if args.refresh_benchmarks:
         try:
-            _, benchmark_records = read_records(data_path)
-            benchmark_rows = build_benchmark_refresh_rows(config, benchmark_records, now)
+            etf_records, benchmark_records = read_records(data_path)
+            benchmark_rows = build_benchmark_refresh_rows(config, etf_records, benchmark_records, now)
         except (HTTPError, URLError, TimeoutError, RuntimeError, json.JSONDecodeError, ValueError) as exc:
             print(f"failed: {exc}", file=sys.stderr)
             return 1
@@ -1199,6 +1406,27 @@ def main() -> int:
         write_page_and_data(path, data_path, config, etf_records, benchmark_records)
         print(
             f"refreshed {etf_changed} ETF trend rows and {benchmark_changed} benchmark trend rows "
+            f"to {path} and {data_path}"
+        )
+        return 0
+
+    if args.backfill_benchmark_date:
+        try:
+            benchmark_rows = build_benchmark_quote_date_rows(
+                config,
+                dt.date.fromisoformat(args.backfill_benchmark_date),
+                now,
+                dt.date.fromisoformat(args.track_date) if args.track_date else None,
+            )
+        except (HTTPError, URLError, TimeoutError, RuntimeError, json.JSONDecodeError, ValueError) as exc:
+            print(f"failed: {exc}", file=sys.stderr)
+            return 1
+        if args.dry_run:
+            print(json.dumps({"benchmark_rows": benchmark_rows}, ensure_ascii=False, default=str, indent=2))
+            return 0
+        _, benchmark_changed = write_rows(path, data_path, config, [], benchmark_rows)
+        print(
+            f"backfilled {benchmark_changed} benchmark rows "
             f"to {path} and {data_path}"
         )
         return 0
