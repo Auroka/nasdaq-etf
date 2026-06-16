@@ -1,0 +1,320 @@
+{
+  "date": "2026-06-16",
+  "etf_records": [
+    {
+      "trade_date": "2026-06-16",
+      "recorded_at": "2026-06-16 15:18:13",
+      "code": "513100",
+      "name": "纳指ETF国泰",
+      "price": 2.28,
+      "daily_change": 0.0097,
+      "estimate": 2.0763,
+      "premium": 0.0981,
+      "quote_time": "2026-06-16 15:18:16",
+      "estimate_time": "2026-06-15",
+      "source_ids": [
+        "eastmoney_quote",
+        "tinyright_t1"
+      ],
+      "trend": {
+        "date": "2026-06-16",
+        "source_ids": [
+          "eastmoney_trend"
+        ],
+        "points": [
+          {
+            "time": "09:30",
+            "value": 2.258
+          },
+          {
+            "time": "09:34",
+            "value": 2.258
+          },
+          {
+            "time": "09:38",
+            "value": 2.258
+          },
+          {
+            "time": "09:41",
+            "value": 2.258
+          },
+          {
+            "time": "09:45",
+            "value": 2.258
+          },
+          {
+            "time": "09:49",
+            "value": 2.258
+          },
+          {
+            "time": "09:53",
+            "value": 2.258
+          },
+          {
+            "time": "09:57",
+            "value": 2.258
+          },
+          {
+            "time": "10:00",
+            "value": 2.258
+          },
+          {
+            "time": "10:04",
+            "value": 2.258
+          },
+          {
+            "time": "10:08",
+            "value": 2.258
+          },
+          {
+            "time": "10:12",
+            "value": 2.258
+          },
+          {
+            "time": "10:16",
+            "value": 2.258
+          },
+          {
+            "time": "10:20",
+            "value": 2.258
+          },
+          {
+            "time": "10:23",
+            "value": 2.258
+          },
+          {
+            "time": "10:27",
+            "value": 2.258
+          },
+          {
+            "time": "10:31",
+            "value": 2.287
+          },
+          {
+            "time": "10:35",
+            "value": 2.283
+          },
+          {
+            "time": "10:39",
+            "value": 2.292
+          },
+          {
+            "time": "10:42",
+            "value": 2.292
+          },
+          {
+            "time": "10:46",
+            "value": 2.289
+          },
+          {
+            "time": "10:50",
+            "value": 2.289
+          },
+          {
+            "time": "10:54",
+            "value": 2.29
+          },
+          {
+            "time": "10:58",
+            "value": 2.285
+          },
+          {
+            "time": "11:01",
+            "value": 2.281
+          },
+          {
+            "time": "11:05",
+            "value": 2.282
+          },
+          {
+            "time": "11:09",
+            "value": 2.282
+          },
+          {
+            "time": "11:13",
+            "value": 2.283
+          },
+          {
+            "time": "11:17",
+            "value": 2.284
+          },
+          {
+            "time": "11:20",
+            "value": 2.283
+          },
+          {
+            "time": "11:24",
+            "value": 2.285
+          },
+          {
+            "time": "11:28",
+            "value": 2.286
+          },
+          {
+            "time": "13:02",
+            "value": 2.285
+          },
+          {
+            "time": "13:06",
+            "value": 2.284
+          },
+          {
+            "time": "13:10",
+            "value": 2.281
+          },
+          {
+            "time": "13:13",
+            "value": 2.283
+          },
+          {
+            "time": "13:17",
+            "value": 2.284
+          },
+          {
+            "time": "13:21",
+            "value": 2.286
+          },
+          {
+            "time": "13:25",
+            "value": 2.283
+          },
+          {
+            "time": "13:29",
+            "value": 2.282
+          },
+          {
+            "time": "13:32",
+            "value": 2.282
+          },
+          {
+            "time": "13:36",
+            "value": 2.281
+          },
+          {
+            "time": "13:40",
+            "value": 2.281
+          },
+          {
+            "time": "13:44",
+            "value": 2.276
+          },
+          {
+            "time": "13:48",
+            "value": 2.28
+          },
+          {
+            "time": "13:51",
+            "value": 2.28
+          },
+          {
+            "time": "13:55",
+            "value": 2.283
+          },
+          {
+            "time": "13:59",
+            "value": 2.28
+          },
+          {
+            "time": "14:03",
+            "value": 2.28
+          },
+          {
+            "time": "14:07",
+            "value": 2.28
+          },
+          {
+            "time": "14:10",
+            "value": 2.28
+          },
+          {
+            "time": "14:14",
+            "value": 2.282
+          },
+          {
+            "time": "14:18",
+            "value": 2.281
+          },
+          {
+            "time": "14:22",
+            "value": 2.28
+          },
+          {
+            "time": "14:26",
+            "value": 2.28
+          },
+          {
+            "time": "14:30",
+            "value": 2.279
+          },
+          {
+            "time": "14:33",
+            "value": 2.279
+          },
+          {
+            "time": "14:37",
+            "value": 2.278
+          },
+          {
+            "time": "14:41",
+            "value": 2.281
+          },
+          {
+            "time": "14:45",
+            "value": 2.281
+          },
+          {
+            "time": "14:49",
+            "value": 2.281
+          },
+          {
+            "time": "14:52",
+            "value": 2.28
+          },
+          {
+            "time": "14:56",
+            "value": 2.28
+          },
+          {
+            "time": "15:00",
+            "value": 2.28
+          }
+        ]
+      }
+    },
+    {
+      "trade_date": "2026-06-16",
+      "recorded_at": "2026-06-16 15:18:13",
+      "code": "159501",
+      "name": "纳指ETF嘉实",
+      "price": 2.127,
+      "daily_change": 0.0066,
+      "estimate": 1.9493,
+      "premium": 0.09119999999999999,
+      "quote_time": "2026-06-16 15:17:24",
+      "estimate_time": "2026-06-15",
+      "source_ids": [
+        "eastmoney_quote",
+        "tinyright_t1"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-06-16",
+      "recorded_at": "2026-06-16 15:18:13",
+      "code": "159659",
+      "name": "纳斯达克100ETF招商",
+      "price": 2.399,
+      "daily_change": 0.013500000000000002,
+      "estimate": 2.2354,
+      "premium": 0.0732,
+      "quote_time": "2026-06-16 15:17:48",
+      "estimate_time": "2026-06-15",
+      "source_ids": [
+        "eastmoney_quote",
+        "tinyright_t1"
+      ],
+      "trend": null
+    }
+  ],
+  "benchmark_records": []
+}
