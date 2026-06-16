@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-16 15:19:30",
+  "generated_at": "2026-06-16 15:45:36",
   "etfs": [
     {
       "code": "513100",
@@ -50,6 +50,12 @@
       "name": "东方财富分钟走势",
       "purpose": "A股纳指 ETF 当天分钟走势折线图",
       "url_template": "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid={secid}&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11&fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&iscca=0&ndays={days}"
+    },
+    {
+      "id": "sina_minute_kline",
+      "name": "新浪财经分钟 K 线",
+      "purpose": "A股纳指 ETF 分钟走势兜底补录",
+      "url_template": "https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20_{symbol}_5=/CN_MarketData.getKLineData?symbol={symbol}&scale=5&ma=no&datalen={count}"
     },
     {
       "id": "tinyright_t1",
