@@ -112,6 +112,8 @@ def fetch_text(url: str) -> str:
                 "Referer": "https://finance.yahoo.com/",
             }
         )
+    if "quotes.sina.cn" in url:
+        headers.update({"Referer": "https://finance.sina.com.cn/"})
     req = Request(
         url,
         headers=headers,
@@ -453,6 +455,34 @@ def parse_eastmoney_trend(config: dict, code: str, target_date: dt.date, days: i
     return trend_payload(target_date, ["eastmoney_trend"], points)
 
 
+def sina_etf_symbol(code: str) -> str:
+    prefix = "sh" if code.startswith("5") else "sz"
+    return f"{prefix}{code}"
+
+
+def parse_sina_minute_kline(config: dict, code: str, target_date: dt.date) -> dict | None:
+    symbol = sina_etf_symbol(code)
+    url = source_url(config, "sina_minute_kline", symbol=symbol, count="1023")
+    text = fetch_text(url)
+    match = re.search(r"=\((\[.*\])\);\s*$", text, re.S)
+    if not match:
+        return None
+    rows = json.loads(match.group(1))
+    points = []
+    for row in rows:
+        try:
+            point_time = dt.datetime.strptime(str(row.get("day") or ""), "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            continue
+        if point_time.date() != target_date:
+            continue
+        value = as_float(row.get("close")) or as_float(row.get("open"))
+        if value is None:
+            continue
+        points.append({"time": point_time.strftime("%H:%M"), "value": value})
+    return trend_payload(target_date, ["sina_minute_kline"], points)
+
+
 def yahoo_date(timestamp: int) -> dt.date:
     return dt.datetime.fromtimestamp(timestamp, dt.timezone.utc).date()
 
@@ -616,6 +646,12 @@ def yahoo_intraday_enabled() -> bool:
 def parse_etf_trend(config: dict, code: str, target_date: dt.date) -> dict | None:
     try:
         trend = parse_eastmoney_trend(config, code, target_date, days=5)
+    except (RuntimeError, json.JSONDecodeError, ValueError):
+        trend = None
+    if trend:
+        return trend
+    try:
+        trend = parse_sina_minute_kline(config, code, target_date)
     except (RuntimeError, json.JSONDecodeError, ValueError):
         trend = None
     if trend:

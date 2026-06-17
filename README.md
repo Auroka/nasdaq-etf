@@ -103,13 +103,13 @@ python record_nasdaq_etf.py --refresh-benchmarks
 python record_nasdaq_etf.py --backfill-benchmark-date 2026-06-12
 ```
 
-补已记录数据中的分钟走势；东方财富或 Nasdaq 分钟走势不可用时，会用 Yahoo Finance 历史分钟行情兜底：
+补已记录数据中的分钟走势；ETF 会在东方财富不可用时用新浪财经分钟 K 线兜底，QQQ/NDX 会在 Nasdaq 不可用时用 Yahoo Finance 历史分钟行情兜底：
 
 ```powershell
 python record_nasdaq_etf.py --refresh-trends
 ```
 
-Yahoo 分钟走势兜底默认开启；如需临时关闭，设置 `NASDAQ_ETF_ENABLE_YAHOO_INTRADAY=0`。
+Yahoo 分钟走势兜底默认开启；如需临时关闭 Yahoo 备用源，设置 `NASDAQ_ETF_ENABLE_YAHOO_INTRADAY=0`。
 
 如果 Python 客户端被 Yahoo Finance 拦截导致历史分钟走势无法补齐，在当前 PowerShell 会话中执行兜底脚本：
 
