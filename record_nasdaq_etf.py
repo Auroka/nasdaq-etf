@@ -518,6 +518,17 @@ def parse_nasdaq_chart_date(value: str) -> dt.date:
     return dt.datetime.strptime(value, "%b %d, %Y").date()
 
 
+def parse_us_market_time(value: str) -> dt.time | None:
+    try:
+        return dt.datetime.strptime(value, "%I:%M %p").time()
+    except ValueError:
+        return None
+
+
+def is_us_regular_session(time_value: dt.time | None) -> bool:
+    return time_value is not None and dt.time(9, 30) <= time_value <= dt.time(16, 0)
+
+
 def fetch_nasdaq_chart_payload(config: dict, item: dict) -> dict:
     symbol = item.get("nasdaq_symbol") or item["symbol"]
     assetclass = item.get("nasdaq_assetclass") or "index"
@@ -612,10 +623,20 @@ def parse_nasdaq_chart(config: dict, item: dict, target_date: dt.date) -> dict |
     points = []
     for point in payload.get("chart") or []:
         value = as_float(point.get("y")) or as_float((point.get("z") or {}).get("value"))
-        time_text = (point.get("z") or {}).get("dateTime") or ""
-        if value is None or not time_text:
+        time_text = ((point.get("z") or {}).get("dateTime") or "").replace(" ET", "")
+        if value is None or not is_us_regular_session(parse_us_market_time(time_text)):
             continue
-        points.append({"time": time_text.replace(" ET", ""), "value": value})
+        points.append({"time": time_text, "value": value})
+    points.sort(key=lambda point: parse_us_market_time(point["time"]) or dt.time.min)
+
+    close = parse_number_text(str(payload.get("lastSalePrice") or ""))
+    if close is not None and points:
+        # QQQ chart includes extended-hours prints; force the final regular-session
+        # point to the official close used by the table row.
+        if points[-1]["time"] == "4:00 PM":
+            points[-1]["value"] = close
+        else:
+            points.append({"time": "4:00 PM", "value": close})
     return trend_payload(target_date, ["nasdaq_api_chart"], points)
 
 
