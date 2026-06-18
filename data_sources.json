@@ -25,6 +25,12 @@
       "url_template": "https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20_{symbol}_5=/CN_MarketData.getKLineData?symbol={symbol}&scale=5&ma=no&datalen={count}"
     },
     {
+      "id": "tencent_minute",
+      "name": "腾讯证券当天分时",
+      "purpose": "A股纳指 ETF 当天分钟走势兜底",
+      "url_template": "https://web.ifzq.gtimg.cn/appstock/app/minute/query?code={symbol}"
+    },
+    {
       "id": "tinyright_t1",
       "name": "估值日记 T-1 估值",
       "purpose": "A股纳指 ETF T-1 估值和估值日",

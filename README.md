@@ -103,7 +103,7 @@ python record_nasdaq_etf.py --refresh-benchmarks
 python record_nasdaq_etf.py --backfill-benchmark-date 2026-06-12
 ```
 
-补已记录数据中的分钟走势；ETF 会在东方财富不可用时用新浪财经分钟 K 线兜底，QQQ/NDX 会在 Nasdaq 不可用时用 Yahoo Finance 历史分钟行情兜底：
+补已记录数据中的分钟走势；ETF 会按东方财富、腾讯证券当天分时、新浪财经分钟 K 线的顺序获取，QQQ/NDX 会在 Nasdaq 不可用时用 Yahoo Finance 历史分钟行情兜底：
 
 ```powershell
 python record_nasdaq_etf.py --refresh-trends

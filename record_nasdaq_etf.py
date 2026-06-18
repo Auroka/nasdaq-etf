@@ -114,6 +114,8 @@ def fetch_text(url: str) -> str:
         )
     if "quotes.sina.cn" in url:
         headers.update({"Referer": "https://finance.sina.com.cn/"})
+    if "web.ifzq.gtimg.cn" in url:
+        headers.update({"Referer": "https://gu.qq.com/"})
     req = Request(
         url,
         headers=headers,
@@ -455,13 +457,34 @@ def parse_eastmoney_trend(config: dict, code: str, target_date: dt.date, days: i
     return trend_payload(target_date, ["eastmoney_trend"], points)
 
 
-def sina_etf_symbol(code: str) -> str:
+def cn_etf_symbol(code: str) -> str:
     prefix = "sh" if code.startswith("5") else "sz"
     return f"{prefix}{code}"
 
 
+def parse_tencent_minute_trend(config: dict, code: str, target_date: dt.date) -> dict | None:
+    # Tencent's minute endpoint has no explicit date, so use it only for same-day records.
+    if target_date != dt.datetime.now(TZ).date():
+        return None
+    symbol = cn_etf_symbol(code)
+    url = source_url(config, "tencent_minute", symbol=symbol)
+    data = json.loads(fetch_text(url))
+    rows = (((data.get("data") or {}).get(symbol) or {}).get("data") or {}).get("data") or []
+    points = []
+    for row in rows:
+        fields = str(row).split()
+        if len(fields) < 2:
+            continue
+        time_text = fields[0]
+        value = as_float(fields[1])
+        if len(time_text) != 4 or value is None:
+            continue
+        points.append({"time": f"{time_text[:2]}:{time_text[2:]}", "value": value})
+    return trend_payload(target_date, ["tencent_minute"], points)
+
+
 def parse_sina_minute_kline(config: dict, code: str, target_date: dt.date) -> dict | None:
-    symbol = sina_etf_symbol(code)
+    symbol = cn_etf_symbol(code)
     url = source_url(config, "sina_minute_kline", symbol=symbol, count="1023")
     text = fetch_text(url)
     match = re.search(r"=\((\[.*\])\);\s*$", text, re.S)
@@ -646,6 +669,12 @@ def yahoo_intraday_enabled() -> bool:
 def parse_etf_trend(config: dict, code: str, target_date: dt.date) -> dict | None:
     try:
         trend = parse_eastmoney_trend(config, code, target_date, days=5)
+    except (RuntimeError, json.JSONDecodeError, ValueError):
+        trend = None
+    if trend:
+        return trend
+    try:
+        trend = parse_tencent_minute_trend(config, code, target_date)
     except (RuntimeError, json.JSONDecodeError, ValueError):
         trend = None
     if trend:
