@@ -954,6 +954,24 @@ def trend_matches_date(trend: dict | None, date_value: dt.date) -> bool:
     return trend.get("date") == date_value.isoformat()
 
 
+def align_benchmark_trend_close(trend: dict | None, close: float | None) -> dict | None:
+    if not trend or close is None:
+        return trend
+    points = trend.get("points") or []
+    if not points:
+        return trend
+
+    close_point = {"time": "4:00 PM", "value": float(close)}
+    if points[-1].get("time") == "4:00 PM":
+        points[-1] = close_point
+    elif len(points) >= MAX_TREND_POINTS:
+        points[-1] = close_point
+    else:
+        points.append(close_point)
+    trend["points"] = points
+    return trend
+
+
 def build_benchmark_row(
     config: dict,
     item: dict,
@@ -967,6 +985,7 @@ def build_benchmark_row(
     trend = existing_trend if trend_matches_date(existing_trend, quote_row["quote_date"]) else None
     if include_trend and not trend:
         trend = parse_benchmark_trend(config, item, quote_row["quote_date"])
+    trend = align_benchmark_trend_close(trend, quote_row.get("value"))
     return {
         "track_date": track_date,
         "recorded_at": now.strftime("%Y-%m-%d %H:%M:%S"),
@@ -1440,6 +1459,7 @@ def refresh_missing_trends(
         if not item:
             continue
         trend = parse_benchmark_trend(config, item, dt.date.fromisoformat(row["quote_date"]))
+        trend = align_benchmark_trend_close(trend, row.get("value"))
         if trend:
             row["trend"] = trend
             benchmark_changed += 1
