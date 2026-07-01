@@ -26,10 +26,12 @@
 - 默认使用 UTF-8。
 - 日常自动记录使用 `python record_nasdaq_etf.py`。
 - 补录某天使用 `python record_nasdaq_etf.py --backfill-date YYYY-MM-DD`，会同时补录 ETF 和 QQQ/NDX。
+- 历史 ETF 补录优先使用估值日记 T-1/IOPV；目标估值日已不在页面时，使用东方财富基金历史单位净值兜底。
 - 刷新并补齐已记录 ETF 交易日对应的 QQQ/NDX 使用 `python record_nasdaq_etf.py --refresh-benchmarks`。
 - 只补某个美股行情日的 QQQ/NDX 使用 `python record_nasdaq_etf.py --backfill-benchmark-date YYYY-MM-DD`，默认跟踪日期为该行情日后的下一个工作日。
 - 补已记录数据中的分钟走势使用 `python record_nasdaq_etf.py --refresh-trends`。
 - ETF 分钟走势按东方财富、腾讯证券当天分时、新浪财经分钟 K 线的顺序获取；QQQ/NDX 分钟走势先用 Nasdaq，失败后用 Yahoo Finance 兜底。
+- ETF 分钟走势必须覆盖开盘到收盘，最终点必须与表格的 `15:00` 收盘价一致；不完整的新浪走势不能写入。
 - QQQ/NDX 分钟走势只保留美股常规交易时段 `9:30 AM` 到 `4:00 PM`；最终点必须与表格使用的官方收盘价一致。
 - Yahoo 分钟走势兜底默认开启；如需临时关闭，设置 `NASDAQ_ETF_ENABLE_YAHOO_INTRADAY=0`。
 - Python 客户端被 Yahoo Finance 拦截时，历史分钟走势在当前 PowerShell 会话中用 `& .\scripts\refresh_yahoo_intraday_trends.ps1` 兜底补齐。

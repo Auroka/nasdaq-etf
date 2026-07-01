@@ -116,6 +116,8 @@ def fetch_text(url: str) -> str:
         headers.update({"Referer": "https://finance.sina.com.cn/"})
     if "web.ifzq.gtimg.cn" in url:
         headers.update({"Referer": "https://gu.qq.com/"})
+    if "api.fund.eastmoney.com" in url:
+        headers.update({"Referer": "https://fundf10.eastmoney.com/"})
     req = Request(
         url,
         headers=headers,
@@ -406,6 +408,15 @@ def parse_eastmoney_kline(config: dict, code: str, trade_date: dt.date) -> dict:
     }
 
 
+def parse_eastmoney_fund_nav(config: dict, code: str, nav_date: dt.date) -> float | None:
+    date_text = nav_date.isoformat()
+    url = source_url(config, "eastmoney_fund_nav", code=code, date=date_text)
+    data = json.loads(fetch_text(url))
+    rows = (data.get("Data") or {}).get("LSJZList") or []
+    row = next((item for item in rows if item.get("FSRQ") == date_text), None)
+    return as_float((row or {}).get("DWJZ"))
+
+
 MAX_TREND_POINTS = 64
 
 
@@ -433,6 +444,24 @@ def trend_payload(trend_date: dt.date, source_ids: list[str], points: list[dict]
         "source_ids": source_ids,
         "points": downsample_trend_points(valid_points),
     }
+
+
+def align_etf_trend_close(trend: dict | None, close: float | None) -> dict | None:
+    if not trend or close is None:
+        return trend
+    points = trend.get("points") or []
+    if not points:
+        return trend
+
+    close_point = {"time": "15:00", "value": float(close)}
+    if points[-1].get("time") == "15:00":
+        points[-1] = close_point
+    elif len(points) >= MAX_TREND_POINTS:
+        points[-1] = close_point
+    else:
+        points.append(close_point)
+    trend["points"] = points
+    return trend
 
 
 def parse_eastmoney_trend(config: dict, code: str, target_date: dt.date, days: int = 1) -> dict | None:
@@ -503,6 +532,8 @@ def parse_sina_minute_kline(config: dict, code: str, target_date: dt.date) -> di
         if value is None:
             continue
         points.append({"time": point_time.strftime("%H:%M"), "value": value})
+    if points and (points[0]["time"] > "09:35" or points[-1]["time"] < "15:00"):
+        return None
     return trend_payload(target_date, ["sina_minute_kline"], points)
 
 
@@ -864,7 +895,7 @@ def build_etf_rows(config: dict, now: dt.datetime) -> list[dict]:
             premium = price / estimate - 1
         source_ids = ["eastmoney_quote", "tinyright_t1"] if quote_row else ["tinyright_table", "tinyright_t1"]
         trade_date = (q_time or now).date()
-        trend = parse_etf_trend(config, code, trade_date)
+        trend = align_etf_trend_close(parse_etf_trend(config, code, trade_date), price)
 
         rows.append(
             {
@@ -918,15 +949,21 @@ def build_backfill_etf_rows(
                 estimate = float(iopv["iopv"])
                 source_ids = ["eastmoney_kline", "tinyright_iopv"]
             else:
-                raise RuntimeError(
-                    f"{code} valuation date mismatch: expected {valuation_target_date}, "
-                    f"got T-1 {valuation_date} and IOPV {iopv_date}"
-                )
+                historical_nav = parse_eastmoney_fund_nav(config, code, valuation_target_date)
+                if historical_nav is None:
+                    raise RuntimeError(
+                        f"{code} valuation date mismatch: expected {valuation_target_date}, "
+                        f"got T-1 {valuation_date} and IOPV {iopv_date}"
+                    )
+                valuation_date = valuation_target_date
+                estimate = historical_nav
+                source_ids = ["eastmoney_kline", "eastmoney_fund_nav"]
 
         if valuation_date is None or estimate is None:
             raise RuntimeError(f"{code} has no valuation")
 
         price = quote_row["close"]
+        trend = align_etf_trend_close(parse_etf_trend(config, code, trade_date), price)
         rows.append(
             {
                 "trade_date": trade_date,
@@ -942,6 +979,7 @@ def build_backfill_etf_rows(
                 "source_ids": source_ids,
                 "quote_date": trade_date,
                 "estimate_date": valuation_date,
+                "trend": trend,
             }
         )
 
@@ -1445,6 +1483,7 @@ def refresh_missing_trends(
             row["code"],
             dt.date.fromisoformat(row["trade_date"]),
         )
+        trend = align_etf_trend_close(trend, row.get("price"))
         if trend:
             row["trend"] = trend
             etf_changed += 1

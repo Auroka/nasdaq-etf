@@ -92,6 +92,8 @@ python record_nasdaq_etf.py
 python record_nasdaq_etf.py --backfill-date 2026-06-01
 ```
 
+历史估值优先使用估值日记 T-1/IOPV；页面已不保留目标日期时，使用东方财富基金历史单位净值兜底。
+
 刷新并补齐已记录 ETF 交易日对应的 QQQ/NDX 回撤口径：
 
 ```powershell
@@ -109,6 +111,8 @@ python record_nasdaq_etf.py --backfill-benchmark-date 2026-06-12
 ```powershell
 python record_nasdaq_etf.py --refresh-trends
 ```
+
+ETF 走势必须覆盖开盘到收盘，最终点与表格的 `15:00` 收盘价一致；不完整的新浪数据会继续回退 Yahoo。
 
 Yahoo 分钟走势兜底默认开启；如需临时关闭 Yahoo 备用源，设置 `NASDAQ_ETF_ENABLE_YAHOO_INTRADAY=0`。
 
