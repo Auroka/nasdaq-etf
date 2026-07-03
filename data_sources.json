@@ -13,6 +13,12 @@
       "url_template": "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid={secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=101&fqt=1&beg={date}&end={date}"
     },
     {
+      "id": "sina_daily_kline",
+      "name": "新浪财经日 K 线",
+      "purpose": "东方财富不可用时补录 A股纳指 ETF 历史收盘价和涨幅",
+      "url_template": "https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20_{symbol}_240=/CN_MarketData.getKLineData?symbol={symbol}&scale=240&ma=no&datalen={count}"
+    },
+    {
       "id": "eastmoney_fund_nav",
       "name": "东方财富基金历史净值",
       "purpose": "补录历史日期缺失的 ETF T-1 估值",

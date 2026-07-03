@@ -405,7 +405,45 @@ def parse_eastmoney_kline(config: dict, code: str, trade_date: dt.date) -> dict:
         "date": dt.date.fromisoformat(fields[0]),
         "close": float(fields[2]),
         "daily_change": float(fields[8]) / 100,
+        "source_id": "eastmoney_kline",
     }
+
+
+def parse_sina_jsonp_rows(text: str) -> list[dict]:
+    match = re.search(r"=\((\[.*\])\);?\s*$", text, re.S)
+    return json.loads(match.group(1)) if match else []
+
+
+def parse_sina_daily_kline(config: dict, code: str, trade_date: dt.date) -> dict:
+    symbol = cn_etf_symbol(code)
+    url = source_url(config, "sina_daily_kline", symbol=symbol, count="30")
+    rows = parse_sina_jsonp_rows(fetch_text(url))
+    dates = [str(row.get("day") or "")[:10] for row in rows]
+    date_text = trade_date.isoformat()
+    if date_text not in dates:
+        raise RuntimeError(f"{code} has no Sina daily kline on {trade_date}")
+
+    index = dates.index(date_text)
+    close = as_float(rows[index].get("close"))
+    previous_close = as_float(rows[index - 1].get("close")) if index > 0 else None
+    if close is None or previous_close is None:
+        raise RuntimeError(f"{code} Sina daily kline is incomplete")
+    name = next((item["name"] for item in config.get("etfs", []) if item["code"] == code), code)
+    return {
+        "code": code,
+        "name": name,
+        "date": trade_date,
+        "close": close,
+        "daily_change": close / previous_close - 1,
+        "source_id": "sina_daily_kline",
+    }
+
+
+def parse_historical_etf_quote(config: dict, code: str, trade_date: dt.date) -> dict:
+    try:
+        return parse_eastmoney_kline(config, code, trade_date)
+    except (RuntimeError, json.JSONDecodeError, ValueError):
+        return parse_sina_daily_kline(config, code, trade_date)
 
 
 def parse_eastmoney_fund_nav(config: dict, code: str, nav_date: dt.date) -> float | None:
@@ -515,11 +553,7 @@ def parse_tencent_minute_trend(config: dict, code: str, target_date: dt.date) ->
 def parse_sina_minute_kline(config: dict, code: str, target_date: dt.date) -> dict | None:
     symbol = cn_etf_symbol(code)
     url = source_url(config, "sina_minute_kline", symbol=symbol, count="1023")
-    text = fetch_text(url)
-    match = re.search(r"=\((\[.*\])\);\s*$", text, re.S)
-    if not match:
-        return None
-    rows = json.loads(match.group(1))
+    rows = parse_sina_jsonp_rows(fetch_text(url))
     points = []
     for row in rows:
         try:
@@ -931,8 +965,9 @@ def build_backfill_etf_rows(
     rows = []
 
     for code in codes:
-        quote_row = parse_eastmoney_kline(config, code, trade_date)
-        source_ids = ["eastmoney_kline", "tinyright_t1"]
+        quote_row = parse_historical_etf_quote(config, code, trade_date)
+        quote_source_id = quote_row["source_id"]
+        source_ids = [quote_source_id, "tinyright_t1"]
         valuation = t1_data.get(code)
         if valuation:
             valuation_date = dt.date.fromisoformat(valuation["t1_date"])
@@ -947,7 +982,7 @@ def build_backfill_etf_rows(
             if iopv and iopv_date == valuation_target_date:
                 valuation_date = iopv_date
                 estimate = float(iopv["iopv"])
-                source_ids = ["eastmoney_kline", "tinyright_iopv"]
+                source_ids = [quote_source_id, "tinyright_iopv"]
             else:
                 historical_nav = parse_eastmoney_fund_nav(config, code, valuation_target_date)
                 if historical_nav is None:
@@ -957,7 +992,7 @@ def build_backfill_etf_rows(
                     )
                 valuation_date = valuation_target_date
                 estimate = historical_nav
-                source_ids = ["eastmoney_kline", "eastmoney_fund_nav"]
+                source_ids = [quote_source_id, "eastmoney_fund_nav"]
 
         if valuation_date is None or estimate is None:
             raise RuntimeError(f"{code} has no valuation")
