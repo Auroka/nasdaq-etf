@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-06 15:33:33",
+  "generated_at": "2026-07-07 17:06:14",
   "etfs": [
     {
       "code": "513100",
@@ -132,10 +132,16 @@
   ],
   "daily_files": [
     {
+      "date": "2026-07-07",
+      "file": "daily-records/2026/07/2026-07-07.json",
+      "etf_count": 3,
+      "benchmark_count": 0
+    },
+    {
       "date": "2026-07-06",
       "file": "daily-records/2026/07/2026-07-06.json",
       "etf_count": 3,
-      "benchmark_count": 0
+      "benchmark_count": 2
     },
     {
       "date": "2026-07-03",

@@ -845,7 +845,7 @@
   "benchmark_records": [
     {
       "track_date": "2026-06-15",
-      "recorded_at": "2026-06-15 15:20:45",
+      "recorded_at": "2026-07-07 17:05:12",
       "symbol": "QQQ",
       "name": "Invesco QQQ Trust",
       "value": 721.34,
@@ -1117,15 +1117,15 @@
             "value": 723.1
           },
           {
-            "time": "7:59 PM",
-            "value": 722.98
+            "time": "4:00 PM",
+            "value": 721.34
           }
         ]
       }
     },
     {
       "track_date": "2026-06-15",
-      "recorded_at": "2026-06-15 15:20:45",
+      "recorded_at": "2026-07-07 17:05:12",
       "symbol": "NDX",
       "name": "Nasdaq 100 Index",
       "value": 29635.95,
