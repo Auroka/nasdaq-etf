@@ -19,9 +19,8 @@
 - 中国市场交易日期
 - 收盘价格
 - 当天涨幅
-- T-1 估值
-- T-1 估值日
-- 相对 T-1 估值的溢价率
+- 当前净值（来自腾讯自选股 ETF 详情 `nav` 字段，替代原来的 T-1 估值）
+- 相对净值的溢价率
 - 当天分钟走势
 - 实际使用的数据源
 
@@ -45,7 +44,8 @@
 ### 1.2 项目不做什么
 
 - 不提供实时交易信号。
-- 不使用盘中最高价计算 QQQ/NDX 历史最高点。
+- 不使用盘中最高价计算 QQQ/NDX 历史最高点；历史最高收盘由项目已有记录自行维护：每次写入新记录时，将当前收盘值与已有 `history_high` 比较取较大值。
+- 不依赖外部估值服务（如 tinyright）。ETF 溢价率按当前价格除以腾讯自选股 ETF 详情返回的 `nav` 净值计算。
 - 不把 `node_modules` 部署到 GitHub Pages。
 - 不依赖数据库，正式数据由按日期拆分的 JSON 文件保存。
 - 不内置完整的中国和美国交易所节假日日历。
@@ -155,29 +155,31 @@ nasdaq-etf/
 ### 4.1 ETF 溢价率
 
 ```text
-溢价率 = ETF 收盘价格 / T-1 估值 - 1
+溢价率 = ETF 收盘价格 / 当前净值 - 1
 ```
 
 例如溢价率 `0.0325` 在页面展示为 `+3.25%`。
 
+当前净值来自腾讯自选股 ETF 详情（`data_etf`）的 `nav` 字段。该值对应 QDII ETF 最新公布的官方净值，与项目原来使用的 T-1 IOPV 估值数值一致。
+
 注意：
 
 - `daily_change`、`premium` 和 `drawdown` 在 JSON 中都保存为小数比例，不保存为百分数字符串。
-- T-1 估值必须同时记录实际估值日期。
-- 历史补录时如果估值日期不匹配，不得拿当前估值替代历史估值。
+- 溢价率由脚本直接按 `price / estimate - 1` 计算，不依赖外部估值服务。
 
 ### 4.2 QQQ/NDX 历史最高点与回撤
 
 ```text
-回撤 = 当前收盘价或点位 / 截至行情日的历史最高收盘价或点位 - 1
+回撤 = 当前收盘价或点位 / 历史最高收盘价或点位 - 1
 ```
 
 关键规则：
 
 - 历史最高点按收盘价统计，不使用盘中最高价。
-- `history_high` 的统计范围截止到当前记录的 `quote_date`。
+- 历史最高收盘由项目已有记录自行维护。每次写入新记录时，将当前收盘值与已有 `history_high` 比较：若更高则更新 `history_high` 和 `history_high_date`，否则保持原有值。
 - `history_high_date` 是产生历史最高收盘的日期。
 - 当前值等于历史最高收盘时，回撤为 `0`。
+- 初次建立记录或怀疑已有记录遗漏更高收盘时，可从腾讯自选股历史 K 线（`data_kline`）获取足量历史数据后遍历 `last` 字段得出。
 
 ### 4.3 跟踪日期与行情日期
 
@@ -278,10 +280,8 @@ ETF 行关键字段：
 | `name` | ETF 名称 |
 | `price` | 收盘价格 |
 | `daily_change` | 当天涨幅，小数比例 |
-| `estimate` | T-1 估值 |
+| `estimate` | 当前净值（来自腾讯自选股 ETF 详情 `nav` 字段，与原来的 T-1 IOPV 数值一致） |
 | `premium` | 溢价率，小数比例 |
-| `quote_time` | ETF 行情时间，仅保留在数据文件中 |
-| `estimate_time` | 实际估值日期或时间 |
 | `source_ids` | 本行数据源 ID 列表 |
 | `trend` | 分钟走势；无可用走势时为 `null` |
 
@@ -317,28 +317,31 @@ QQQ/NDX：quote_date + symbol
 
 完整接口地址和标的配置以 `data_sources.json` 为唯一准确信息。
 
+主数据源为腾讯自选股（westock-mcp），无法直接从 westock 获取的数据使用以下备用源。
+
 ### 6.1 当日 ETF 表格数据
 
 | 数据 | 首选 | 备用 |
 | --- | --- | --- |
-| 价格、涨幅、行情日期 | `eastmoney_quote` | `tinyright_table` |
-| T-1 估值和估值日 | `tinyright_t1` | 无静默替代，缺失则失败 |
+| 价格、涨幅 | `westock_quote` (腾讯自选股) | `eastmoney_quote` |
+| 净值（estimate） | `westock_etf_detail` (腾讯自选股 ETF 详情 `nav` 字段) | 无静默替代，缺失则失败 |
 
-脚本优先采用接口直接给出的溢价率；接口未提供时按 `price / estimate - 1` 计算。
+溢价率由脚本直接按 `price / estimate - 1` 计算，不依赖外部估值服务或接口返回的溢折价率。
 
 ### 6.2 历史 ETF 补录
 
 | 数据 | 顺序 |
 | --- | --- |
-| 历史收盘和涨幅 | `eastmoney_kline` -> `sina_daily_kline` |
-| 历史估值 | `tinyright_t1` 日期匹配 -> `tinyright_iopv` 日期匹配 -> `eastmoney_fund_nav` |
+| 历史收盘和涨幅 | `westock_kline` -> `eastmoney_kline` -> `sina_daily_kline` |
+| 净值（estimate） | `westock_etf_detail`，记录写入时刻的最新可用净值 |
 
-任何估值兜底都必须匹配目标估值日期。全部不匹配时脚本应失败，不得写入猜测值。
+净值与 T-1 IOPV 数值一致，历史补录时使用写入时刻 westock 返回的最新净值。不再需要历史净值日期精确匹配。
 
 ### 6.3 ETF 分钟走势
 
 ```text
-eastmoney_trend
+westock_minute (腾讯自选股分时，主数据源)
+  -> eastmoney_trend
   -> tencent_minute（只用于执行当天）
   -> sina_minute_kline
   -> yahoo_intraday_chart
@@ -355,21 +358,24 @@ Remove-Item Env:NASDAQ_ETF_ENABLE_YAHOO_INTRADAY
 ### 6.4 QQQ/NDX 日线与回撤
 
 ```text
-nasdaq_api_historical
+westock_quote / westock_kline (腾讯自选股)
+  -> nasdaq_api_historical
   -> yahoo_chart
-  -> 在目标日缺口处再次尝试 Nasdaq historical/chart
 ```
 
-历史最高点由完整历史收盘序列计算。Nasdaq 官方历史接口是首选，Yahoo 是备用源。
+QQQ 代码：`usQQQ`，NDX 代码：`usNDX`。腾讯自选股直接支持这两个美股的实时行情和历史 K 线。
+
+历史最高收盘由项目已有记录自行维护：每次记录时与已有 `history_high` 比较取较大值。初次建立或怀疑遗漏时，用 `westock_kline` 获取足量历史 K 线遍历 `last` 字段得出。
 
 ### 6.5 QQQ/NDX 分钟走势
 
 ```text
-nasdaq_api_chart
+westock_minute (腾讯自选股分时)
+  -> nasdaq_api_chart
   -> yahoo_intraday_chart
 ```
 
-Nasdaq chart 会过滤盘前和盘后数据。Yahoo 数据作为备用时，最终点仍会与正式收盘值对齐。
+腾讯自选股分时返回美股常规交易时段（9:30 AM - 4:00 PM）的分钟数据。Nasdaq chart 和 Yahoo 数据作为备用时，最终点仍会与正式收盘值对齐。
 
 ## 7. 首次接手与本地启动
 
@@ -469,11 +475,10 @@ Get-Content -Raw -Encoding utf8 (Join-Path .\data $latest.file)
 
 - 当前中国交易日有且只有 `3` 条 ETF。
 - ETF 代码为 `513100`、`159501`、`159659`。
-- `trade_date`、`quote_time` 和走势日期一致。
-- `estimate_time` 是实际 T-1 估值日。
+- `trade_date` 与走势日期一致。
 - `premium` 满足 `price / estimate - 1`。
 - QQQ/NDX 各有一条记录，并且 `quote_date` 是最近有效美股收盘日。
-- `history_high` 和 `drawdown` 使用收盘价口径。
+- `history_high` 和 `drawdown` 使用收盘价口径，且 `history_high` 不小于当前 `value`。
 - ETF 最后一个走势点为 `15:00` 且等于 `price`。
 - QQQ/NDX 最后一个走势点为 `4:00 PM` 且等于 `value`。
 - `source_ids` 与实际来源相符。
@@ -538,10 +543,10 @@ python record_nasdaq_etf.py --backfill-date 2026-06-01
 该命令会：
 
 1. 获取指定中国交易日的三只 ETF 历史收盘和涨幅。
-2. 查找该跟踪日对应的最近有效美股行情。
-3. 使用该美股行情日作为历史估值目标日期。
-4. 获取匹配日期的 T-1/IOPV，缺失时使用基金历史单位净值。
-5. 计算 ETF 溢价率。
+2. 获取写入时刻腾讯自选股 ETF 详情的最新净值作为估值。
+3. 计算 ETF 溢价率 = `price / estimate - 1`。
+4. 查找该跟踪日对应的最近有效美股行情。
+5. 获取对应的 QQQ/NDX 收盘价、计算涨幅、更新历史最高收盘和回撤。
 6. 生成或更新 ETF 和 QQQ/NDX 记录。
 7. 尝试补分钟走势。
 
@@ -777,18 +782,15 @@ Automation ID：etf-2
 
 脚本先请求东方财富，失败后自动使用新浪日 K。若两者都失败，补录终止。不要手工填入未经来源确认的收盘价。
 
-### 14.3 `valuation date mismatch`
+### 14.3 估值数据缺失
 
-含义：Tinyright T-1 和 IOPV 的日期都不等于目标估值日，并且东方财富历史单位净值也没有该日期。
+含义：腾讯自选股 ETF 详情的 `nav` 字段为空或请求失败。
 
 处理：
 
-1. 确认目标 `trade_date` 和对应美股 `quote_date` 是否正确。
-2. 核对基金该日是否有正式净值。
-3. 重试接口。
-4. 只有获得明确来源和日期一致的数据后再补录。
-
-禁止用最近一天估值、当前估值或人工猜测值绕过。
+1. 确认 ETF 代码是否正确（`sh513100` / `sz159501` / `sz159659`）。
+2. 稍后重试。腾讯自选股 ETF 详情接口返回的 `nav` 字段对应 QDII ETF 最新官方净值，与原来使用的 T-1 IOPV 数值一致。
+3. 若持续失败，检查 `data_sources.json` 中 westock 相关配置，回退到备用数据源。
 
 ### 14.4 价格和涨幅正确，但溢价率错误
 
@@ -798,7 +800,7 @@ Automation ID：etf-2
 price / estimate - 1
 ```
 
-如果复算结果与 JSON 不一致，检查接口是否直接返回了错误 `premium`。当前当日流程优先使用 Tinyright 返回的 `premium`，缺失时才自行计算；必要时应修正代码，让写入口径统一，并重新生成目标日期数据。
+如果复算结果与 JSON 不一致，检查 `estimate` 值是否正确。溢价率由脚本直接计算，不依赖外部接口返回的溢折价率。
 
 ### 14.5 页面没有走势
 
@@ -898,6 +900,7 @@ npm run build
 - 每次页面加载会读取清单中的全部每日文件；数据规模显著增长后，需要考虑按月清单、分页或按需加载。
 - 写入时会重建清单并写出所有已加载每日记录；手工删除清单引用前应同时检查是否留下未引用的孤立文件。
 - QQQ/NDX 去重键为 `quote_date + symbol`，无法在同一美股行情日保留多个不同 `track_date` 版本。
+- ETF 溢价率使用写入时刻的最新可用净值计算；历史补录时使用的净值与实时记录时可能不同（均为当时最新的官方净值，数值上与原来的 T-1 IOPV 一致）。
 - 自动任务是本机状态，不随 Git 仓库迁移。
 
 ## 17. Agent 接手检查清单
@@ -925,8 +928,7 @@ npm run build
 遇到失败时：
 
 - [ ] 保留原有正确记录。
-- [ ] 明确报告是跳过、接口失败、估值日期不匹配还是走势缺失。
-- [ ] 不使用错误日期、当前值或猜测值填补历史数据。
+- [ ] 明确报告是跳过、接口失败还是走势缺失。
 - [ ] 不通过删除校验或注释错误来制造成功结果。
 
 ## 18. 最短操作路径

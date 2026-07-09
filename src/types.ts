@@ -40,8 +40,6 @@ export type EtfRecord = {
   daily_change: number;
   estimate: number;
   premium: number;
-  quote_time?: string;
-  estimate_time: string;
   source_ids: string[];
   trend?: Trend | null;
 };

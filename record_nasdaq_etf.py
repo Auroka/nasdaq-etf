@@ -35,9 +35,8 @@ ETF_HEADERS = [
     "名称",
     "当前价格",
     "当天涨幅",
-    "T-1估值",
+    "当前净值",
     "溢价率",
-    "T-1估值日",
     "数据源",
 ]
 BENCHMARK_HEADERS = [
@@ -55,17 +54,9 @@ BENCHMARK_HEADERS = [
 SOURCE_HEADERS = ["数据源", "用途", "接口"]
 
 LEGACY_SOURCE_IDS = {
-    "Eastmoney quote; n.tinyright T-1 valuation": ["eastmoney_quote", "tinyright_t1"],
-    "n.tinyright quote and T-1 valuation": ["tinyright_table", "tinyright_t1"],
-    "Eastmoney historical K-line; n.tinyright T-1 valuation": ["eastmoney_kline", "tinyright_t1"],
-    "existing historical quote; user-provided T-1 valuation": [
-        "manual_historical_quote",
-        "user_provided_t1",
-    ],
-    "existing historical quote; n.tinyright T-1 valuation": [
-        "manual_historical_quote",
-        "tinyright_t1",
-    ],
+    "Eastmoney quote": ["eastmoney_quote"],
+    "Eastmoney historical K-line": ["eastmoney_kline"],
+    "existing historical quote": ["manual_historical_quote"],
 }
 
 
@@ -272,14 +263,6 @@ def parse_datetime(value: str | None) -> dt.datetime | None:
     return None
 
 
-def quote_time(row: dict) -> dt.datetime | None:
-    try:
-        ts = int(row.get("f124"))
-    except (TypeError, ValueError):
-        return None
-    return dt.datetime.fromtimestamp(ts, TZ)
-
-
 def secid_for_code(code: str) -> str:
     market = "1" if code.startswith("5") else "0"
     return f"{market}.{code}"
@@ -312,7 +295,8 @@ def parse_table_rows(raw: str, codes: tuple[str, ...]) -> dict[str, dict]:
 
 
 def parse_tinyright(config: dict, codes: tuple[str, ...]) -> dict[str, dict]:
-    raw = fetch_text(source_url(config, "tinyright_t1"))
+    url = "https://n.tinyright.com/"
+    raw = fetch_text(url)
     table_rows = parse_table_rows(raw, codes)
     if all(code in table_rows for code in codes):
         return table_rows
@@ -348,7 +332,8 @@ def parse_tinyright(config: dict, codes: tuple[str, ...]) -> dict[str, dict]:
 
 
 def parse_tinyright_t1(config: dict, codes: tuple[str, ...]) -> dict[str, dict]:
-    raw = fetch_text(source_url(config, "tinyright_t1"))
+    url = "https://n.tinyright.com/"
+    raw = fetch_text(url)
     candidates = []
     for value in (raw, html.unescape(raw)):
         candidates.append(value)
@@ -365,7 +350,8 @@ def parse_tinyright_t1(config: dict, codes: tuple[str, ...]) -> dict[str, dict]:
 
 
 def parse_tinyright_iopv(config: dict, codes: tuple[str, ...]) -> dict[str, dict]:
-    raw = fetch_text(source_url(config, "tinyright_iopv"))
+    url = "https://n.tinyright.com/"
+    raw = fetch_text(url)
     candidates = []
     for value in (raw, html.unescape(raw)):
         candidates.append(value)
@@ -921,13 +907,12 @@ def build_etf_rows(config: dict, now: dt.datetime) -> list[dict]:
         if price is None or daily_change is None or estimate is None:
             raise RuntimeError(f"{code} data is incomplete")
 
-        estimate_time = realtime.get("realtime_datetime") or ""
-        e_time = parse_datetime(estimate_time)
-        q_time = quote_time(quote_row) or parse_datetime(market.get("datetime")) or e_time
+        _e_time = parse_datetime(realtime.get("realtime_datetime") or "")
+        q_time = parse_datetime(market.get("datetime")) or _e_time
         premium = as_float(realtime.get("premium"))
         if premium is None:
             premium = price / estimate - 1
-        source_ids = ["eastmoney_quote", "tinyright_t1"] if quote_row else ["tinyright_table", "tinyright_t1"]
+        source_ids = ["eastmoney_quote"] if quote_row else ["westock_etf_detail"]
         trade_date = (q_time or now).date()
         trend = align_etf_trend_close(parse_etf_trend(config, code, trade_date), price)
 
@@ -941,11 +926,7 @@ def build_etf_rows(config: dict, now: dt.datetime) -> list[dict]:
                 "daily_change": daily_change / 100,
                 "estimate": estimate,
                 "premium": premium,
-                "quote_time": q_time.strftime("%Y-%m-%d %H:%M:%S") if q_time else "",
-                "estimate_time": estimate_time,
                 "source_ids": source_ids,
-                "quote_date": q_time.date() if q_time else None,
-                "estimate_date": e_time.date() if e_time else None,
                 "trend": trend,
             }
         )
@@ -1009,11 +990,7 @@ def build_backfill_etf_rows(
                 "daily_change": quote_row["daily_change"],
                 "estimate": estimate,
                 "premium": price / estimate - 1,
-                "quote_time": f"{trade_date.isoformat()} 15:00:00",
-                "estimate_time": valuation_date.isoformat(),
                 "source_ids": source_ids,
-                "quote_date": trade_date,
-                "estimate_date": valuation_date,
                 "trend": trend,
             }
         )
@@ -1091,8 +1068,6 @@ def public_etf_row(item: dict) -> dict:
         "daily_change": item["daily_change"],
         "estimate": item["estimate"],
         "premium": item["premium"],
-        "quote_time": item.get("quote_time", ""),
-        "estimate_time": item["estimate_time"],
         "source_ids": item.get("source_ids") or infer_legacy_source_ids(item.get("source", "")),
         "trend": item.get("trend"),
     }

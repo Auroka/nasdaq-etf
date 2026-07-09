@@ -181,9 +181,8 @@ function EtfTable({ records }: { records: EtfRecord[] }) {
           <th>名称</th>
           <th>当前价格</th>
           <th>当天涨幅</th>
-          <th>T-1估值</th>
+          <th>当前净值</th>
           <th>溢价率</th>
-          <th>T-1估值日</th>
           <th>走势</th>
         </tr>
       </thead>
@@ -203,13 +202,12 @@ function EtfTable({ records }: { records: EtfRecord[] }) {
                 <td className={signedPctClass(row.daily_change)}>{fmtPct(row.daily_change)}</td>
                 <td className="num">{fmtNumber(row.estimate, 4)}</td>
                 <td className={signedPctClass(row.premium)}>{fmtPct(row.premium)}</td>
-                <td>{row.estimate_time}</td>
                 <td><TrendSparkline trend={row.trend} /></td>
               </tr>
             ))
           )
         ) : (
-          <tr className="empty"><td colSpan={9}>暂无记录</td></tr>
+          <tr className="empty"><td colSpan={8}>暂无记录</td></tr>
         )}
       </tbody>
     </table>
@@ -332,7 +330,7 @@ function App({ appData }: { appData: NasdaqTrackingData }) {
           <div className="table-wrap">
             <BenchmarkTable records={benchmarkRecords} />
           </div>
-          <p className="note">QQQ/NDX 摘要默认按 Nasdaq 官方历史行情统计；Yahoo Finance 日线行情仅作为备用源。回撤 = 当前点位或价格 / 历史最高收盘点或价 - 1。</p>
+          <p className="note">QQQ/NDX 回撤 = 当前点位或价格 / 历史最高收盘点或价 - 1。历史最高收盘由项目已有记录自行维护。</p>
         </section>
       )}
 

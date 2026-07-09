@@ -1,15 +1,39 @@
 {
   "sources": [
     {
+      "id": "westock_quote",
+      "name": "腾讯自选股实时行情",
+      "purpose": "A股纳指 ETF 当前价格、当天涨幅；QQQ 和 NDX 收盘价/点位和当天涨幅（主数据源）",
+      "url_template": "mcp:westock-mcp:data_quote"
+    },
+    {
+      "id": "westock_etf_detail",
+      "name": "腾讯自选股 ETF 详情",
+      "purpose": "A股纳指 ETF 当前净值（替代 T-1 估值），用于计算溢价率",
+      "url_template": "mcp:westock-mcp:data_etf"
+    },
+    {
+      "id": "westock_minute",
+      "name": "腾讯自选股分时数据",
+      "purpose": "A股纳指 ETF、QQQ 和 NDX 分钟走势（主数据源）",
+      "url_template": "mcp:westock-mcp:data_minute"
+    },
+    {
+      "id": "westock_kline",
+      "name": "腾讯自选股历史 K 线",
+      "purpose": "A股纳指 ETF 历史收盘价、QQQ/NDX 历史收盘价；计算历史最高收盘点和回撤",
+      "url_template": "mcp:westock-mcp:data_kline"
+    },
+    {
       "id": "eastmoney_quote",
       "name": "东方财富实时行情",
-      "purpose": "A股纳指 ETF 当前价格、当天涨幅和行情日期",
+      "purpose": "A股纳指 ETF 当前价格、当天涨幅和行情日期（备用）",
       "url_template": "https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f12,f14,f2,f3,f13,f124&secids={secids}"
     },
     {
       "id": "eastmoney_kline",
       "name": "东方财富历史 K 线",
-      "purpose": "A股纳指 ETF 补录日期的收盘价和当天涨幅",
+      "purpose": "A股纳指 ETF 补录日期的收盘价和当天涨幅（备用）",
       "url_template": "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid={secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=101&fqt=1&beg={date}&end={date}"
     },
     {
@@ -19,46 +43,22 @@
       "url_template": "https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20_{symbol}_240=/CN_MarketData.getKLineData?symbol={symbol}&scale=240&ma=no&datalen={count}"
     },
     {
-      "id": "eastmoney_fund_nav",
-      "name": "东方财富基金历史净值",
-      "purpose": "补录历史日期缺失的 ETF T-1 估值",
-      "url_template": "https://api.fund.eastmoney.com/f10/lsjz?fundCode={code}&pageIndex=1&pageSize=20&startDate={date}&endDate={date}"
-    },
-    {
       "id": "eastmoney_trend",
       "name": "东方财富分钟走势",
-      "purpose": "A股纳指 ETF 当天分钟走势折线图",
+      "purpose": "A股纳指 ETF 当天分钟走势折线图（备用）",
       "url_template": "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid={secid}&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11&fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&iscca=0&ndays={days}"
     },
     {
       "id": "sina_minute_kline",
       "name": "新浪财经分钟 K 线",
-      "purpose": "A股纳指 ETF 分钟走势兜底补录",
+      "purpose": "A股纳指 ETF 分钟走势兜底补录（备用）",
       "url_template": "https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20_{symbol}_5=/CN_MarketData.getKLineData?symbol={symbol}&scale=5&ma=no&datalen={count}"
     },
     {
       "id": "tencent_minute",
       "name": "腾讯证券当天分时",
-      "purpose": "A股纳指 ETF 当天分钟走势兜底",
+      "purpose": "A股纳指 ETF 当天分钟走势兜底（备用）",
       "url_template": "https://web.ifzq.gtimg.cn/appstock/app/minute/query?code={symbol}"
-    },
-    {
-      "id": "tinyright_t1",
-      "name": "估值日记 T-1 估值",
-      "purpose": "A股纳指 ETF T-1 估值和估值日",
-      "url": "https://n.tinyright.com/"
-    },
-    {
-      "id": "tinyright_iopv",
-      "name": "估值日记 IOPV 估值",
-      "purpose": "补录缺失日期时，用估值日匹配的 IOPV 估值对齐历史日期",
-      "url": "https://n.tinyright.com/"
-    },
-    {
-      "id": "tinyright_table",
-      "name": "估值日记表格行情",
-      "purpose": "东方财富不可用时的 A股纳指 ETF 价格和涨幅兜底",
-      "url": "https://n.tinyright.com/"
     },
     {
       "id": "yahoo_chart",
@@ -69,7 +69,7 @@
     {
       "id": "yahoo_intraday_chart",
       "name": "Yahoo Finance 分钟行情",
-      "purpose": "东方财富或 Nasdaq 分钟走势不可用时，作为 ETF、QQQ 和 NDX 历史分钟走势备用源",
+      "purpose": "腾讯自选股或 Nasdaq 分钟走势不可用时，作为 ETF、QQQ 和 NDX 历史分钟走势备用源",
       "url_template": "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?period1={period1}&period2={period2}&interval={interval}&includePrePost=false&events=history"
     },
     {
@@ -88,12 +88,6 @@
       "id": "manual_historical_quote",
       "name": "人工保留的历史行情",
       "purpose": "已补录记录中的历史收盘价",
-      "url": ""
-    },
-    {
-      "id": "user_provided_t1",
-      "name": "用户提供的 T-1 估值",
-      "purpose": "已人工校正记录中的 T-1 估值",
       "url": ""
     }
   ],

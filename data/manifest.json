@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-09 15:28:33",
+  "generated_at": "2026-07-09 15:55:19",
   "etfs": [
     {
       "code": "513100",
@@ -94,30 +94,6 @@
       "url_template": "https://web.ifzq.gtimg.cn/appstock/app/minute/query?code={symbol}"
     },
     {
-      "id": "tinyright_t1",
-      "name": "估值日记 T-1 估值",
-      "purpose": "A股纳指 ETF T-1 估值和估值日",
-      "url": "https://n.tinyright.com/"
-    },
-    {
-      "id": "tinyright_iopv",
-      "name": "估值日记 IOPV 估值",
-      "purpose": "补录缺失日期时，用估值日匹配的 IOPV 估值对齐历史日期",
-      "url": "https://n.tinyright.com/"
-    },
-    {
-      "id": "tinyright_table",
-      "name": "估值日记表格行情",
-      "purpose": "东方财富不可用时的 A股纳指 ETF 价格和涨幅兜底",
-      "url": "https://n.tinyright.com/"
-    },
-    {
-      "id": "eastmoney_fund_nav",
-      "name": "东方财富基金历史净值",
-      "purpose": "补录历史日期缺失的 ETF T-1 估值",
-      "url_template": "https://api.fund.eastmoney.com/f10/lsjz?fundCode={code}&pageIndex=1&pageSize=20&startDate={date}&endDate={date}"
-    },
-    {
       "id": "yahoo_chart",
       "name": "Yahoo Finance 日线行情",
       "purpose": "Nasdaq 官方 API 不可用时，作为 QQQ 和 NDX 日线行情备用源",
@@ -145,12 +121,6 @@
       "id": "manual_historical_quote",
       "name": "人工保留的历史行情",
       "purpose": "已补录记录中的历史收盘价",
-      "url": ""
-    },
-    {
-      "id": "user_provided_t1",
-      "name": "用户提供的 T-1 估值",
-      "purpose": "已人工校正记录中的 T-1 估值",
       "url": ""
     }
   ],

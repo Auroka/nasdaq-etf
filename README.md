@@ -19,15 +19,14 @@
 - 名称
 - 当前价格
 - 当天涨幅
-- T-1 估值
+- 当前净值（替代 T-1 估值，来自腾讯自选股 ETF 详情 `nav` 字段）
 - 溢价率
-- T-1 估值日
 - 数据源
 
 溢价率计算方式：
 
 ```text
-溢价率 = 当前价格 / T-1 估值 - 1
+溢价率 = 当前价格 / 当前净值 - 1
 ```
 
 ## QQQ / NDX 记录字段
@@ -37,7 +36,7 @@
 - 名称
 - 当前点位/价格
 - 当天涨幅
-- 历史最高收盘点/价
+- 历史最高收盘点/价（由项目已有记录中的最高收盘值决定）
 - 距最高收盘回撤
 - 最高收盘日期
 - 行情日期
@@ -49,12 +48,13 @@
 回撤 = 当前点位或价格 / 历史最高收盘点或价 - 1
 ```
 
-历史最高点默认按 Nasdaq 官方历史行情的收盘价统计，不使用盘中最高价；Yahoo Finance 仅作为备用源。
+历史最高收盘由项目已有记录自行维护：每次写入新记录时，将当前收盘值与已有历史最高比较，取较大值。不使用盘中最高价。
+
 QQQ/NDX 分钟走势只展示美股常规交易时段，最终点与表格使用的官方收盘价一致。
 
 ## 数据源配置
 
-接口数据源、ETF 代码和 QQQ/NDX 标的统一维护在：
+主数据源（腾讯自选股）和备用数据源（东方财富、新浪财经、Nasdaq 官方、Yahoo Finance）统一维护在：
 
 ```text
 data_sources.json
@@ -94,8 +94,8 @@ python record_nasdaq_etf.py
 python record_nasdaq_etf.py --backfill-date 2026-06-01
 ```
 
-历史估值优先使用估值日记 T-1/IOPV；页面已不保留目标日期时，使用东方财富基金历史单位净值兜底。
-历史 ETF 价格和涨幅优先使用东方财富历史 K 线，接口不可用时使用新浪财经日 K 线兜底。
+ETF 价格和涨幅优先使用腾讯自选股实时行情和历史 K 线，不可用时回退东方财富。
+ETF 溢价率通过腾讯自选股 ETF 详情的 `nav` 字段按 `price / nav - 1` 计算。
 
 刷新并补齐已记录 ETF 交易日对应的 QQQ/NDX 回撤口径：
 
@@ -109,13 +109,13 @@ python record_nasdaq_etf.py --refresh-benchmarks
 python record_nasdaq_etf.py --backfill-benchmark-date 2026-06-12
 ```
 
-补已记录数据中的分钟走势；ETF 会按东方财富、腾讯证券当天分时、新浪财经分钟 K 线的顺序获取，QQQ/NDX 会在 Nasdaq 不可用时用 Yahoo Finance 历史分钟行情兜底：
+补已记录数据中的分钟走势；ETF 和 QQQ/NDX 均优先使用腾讯自选股分时，不可用时按东方财富、腾讯证券分时、新浪分钟 K 线、Yahoo 的顺序兜底：
 
 ```powershell
 python record_nasdaq_etf.py --refresh-trends
 ```
 
-ETF 走势必须覆盖开盘到收盘，最终点与表格的 `15:00` 收盘价一致；不完整的新浪数据会继续回退 Yahoo。
+ETF 走势必须覆盖开盘到收盘，最终点与表格的 `15:00` 收盘价一致。
 
 Yahoo 分钟走势兜底默认开启；如需临时关闭 Yahoo 备用源，设置 `NASDAQ_ETF_ENABLE_YAHOO_INTRADAY=0`。
 
