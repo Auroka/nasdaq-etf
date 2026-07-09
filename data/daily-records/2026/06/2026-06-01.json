@@ -10,8 +10,6 @@
       "daily_change": 0.0405,
       "estimate": 2.0767,
       "premium": 0.13882602205422057,
-      "quote_time": "2026-06-01 15:00:00",
-      "estimate_time": "2026-06-01",
       "source_ids": [
         "manual_historical_quote",
         "user_provided_t1"
@@ -182,8 +180,6 @@
       "daily_change": 0.0368,
       "estimate": 1.9494,
       "premium": 0.12855237508977124,
-      "quote_time": "2026-06-01 15:00:00",
-      "estimate_time": "2026-06-01",
       "source_ids": [
         "manual_historical_quote",
         "user_provided_t1"
@@ -462,8 +458,6 @@
       "daily_change": 0.038599999999999995,
       "estimate": 2.2353427658335216,
       "premium": 0.1067653864160234,
-      "quote_time": "2026-06-01 15:00:00",
-      "estimate_time": "2026-06-01",
       "source_ids": [
         "manual_historical_quote",
         "tinyright_t1"

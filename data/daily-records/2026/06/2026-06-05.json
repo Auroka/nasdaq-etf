@@ -10,8 +10,6 @@
       "daily_change": -0.015600000000000001,
       "estimate": 2.0703,
       "premium": 0.06509999999999999,
-      "quote_time": "2026-06-05 15:00:00",
-      "estimate_time": "2026-06-04",
       "source_ids": [
         "tinyright_table",
         "tinyright_t1"
@@ -230,8 +228,6 @@
       "daily_change": -0.0095,
       "estimate": 1.9434,
       "premium": 0.0739,
-      "quote_time": "2026-06-05 15:00:00",
-      "estimate_time": "2026-06-04",
       "source_ids": [
         "tinyright_table",
         "tinyright_t1"
@@ -510,8 +506,6 @@
       "daily_change": -0.013600000000000001,
       "estimate": 2.2286,
       "premium": 0.04190000000000001,
-      "quote_time": "2026-06-05 15:00:00",
-      "estimate_time": "2026-06-04",
       "source_ids": [
         "tinyright_table",
         "tinyright_t1"

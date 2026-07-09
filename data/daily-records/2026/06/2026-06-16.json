@@ -10,8 +10,6 @@
       "daily_change": 0.0097,
       "estimate": 2.0763,
       "premium": 0.0981,
-      "quote_time": "2026-06-16 15:18:16",
-      "estimate_time": "2026-06-15",
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
@@ -290,8 +288,6 @@
       "daily_change": 0.0066,
       "estimate": 1.9493,
       "premium": 0.09119999999999999,
-      "quote_time": "2026-06-16 15:17:24",
-      "estimate_time": "2026-06-15",
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"
@@ -458,8 +454,6 @@
       "daily_change": 0.013500000000000002,
       "estimate": 2.2354,
       "premium": 0.0732,
-      "quote_time": "2026-06-16 15:17:48",
-      "estimate_time": "2026-06-15",
       "source_ids": [
         "eastmoney_quote",
         "tinyright_t1"

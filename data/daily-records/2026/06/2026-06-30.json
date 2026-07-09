@@ -10,8 +10,6 @@
       "daily_change": 0.011899999999999999,
       "estimate": 2.0249,
       "premium": 0.08844881228702661,
-      "quote_time": "2026-06-30 15:00:00",
-      "estimate_time": "2026-06-29",
       "source_ids": [
         "eastmoney_kline",
         "tinyright_iopv"
@@ -290,8 +288,6 @@
       "daily_change": 0.0147,
       "estimate": 1.9016,
       "premium": 0.09223811527135051,
-      "quote_time": "2026-06-30 15:00:00",
-      "estimate_time": "2026-06-29",
       "source_ids": [
         "eastmoney_kline",
         "tinyright_iopv"
@@ -570,8 +566,6 @@
       "daily_change": 0.0152,
       "estimate": 2.1855,
       "premium": 0.07023564401738724,
-      "quote_time": "2026-06-30 15:00:00",
-      "estimate_time": "2026-06-29",
       "source_ids": [
         "eastmoney_kline",
         "tinyright_iopv"

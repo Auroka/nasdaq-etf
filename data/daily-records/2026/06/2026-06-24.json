@@ -10,8 +10,6 @@
       "daily_change": 0.006,
       "estimate": 1.9962,
       "premium": 0.09558160504959412,
-      "quote_time": "2026-06-24 15:00:00",
-      "estimate_time": "2026-06-23",
       "source_ids": [
         "eastmoney_kline",
         "eastmoney_fund_nav"
@@ -226,8 +224,6 @@
       "daily_change": -0.0014000000000000002,
       "estimate": 1.8745,
       "premium": 0.10216057615364083,
-      "quote_time": "2026-06-24 15:00:00",
-      "estimate_time": "2026-06-23",
       "source_ids": [
         "eastmoney_kline",
         "eastmoney_fund_nav"
@@ -442,8 +438,6 @@
       "daily_change": 0.0039000000000000003,
       "estimate": 2.1539,
       "premium": 0.08268721853382233,
-      "quote_time": "2026-06-24 15:00:00",
-      "estimate_time": "2026-06-23",
       "source_ids": [
         "eastmoney_kline",
         "eastmoney_fund_nav"

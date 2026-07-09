@@ -10,8 +10,6 @@
       "daily_change": -0.023087369850611217,
       "estimate": 2.0243,
       "premium": 0.06604752260040492,
-      "quote_time": "2026-07-02 15:00:00",
-      "estimate_time": "2026-07-01",
       "source_ids": [
         "sina_daily_kline",
         "tinyright_iopv"
@@ -226,8 +224,6 @@
       "daily_change": -0.014360938247965471,
       "estimate": 1.901,
       "premium": 0.0831141504471331,
-      "quote_time": "2026-07-02 15:00:00",
-      "estimate_time": "2026-07-01",
       "source_ids": [
         "sina_daily_kline",
         "tinyright_iopv"
@@ -442,8 +438,6 @@
       "daily_change": -0.021294718909710353,
       "estimate": 2.184,
       "premium": 0.052197802197802234,
-      "quote_time": "2026-07-02 15:00:00",
-      "estimate_time": "2026-07-01",
       "source_ids": [
         "sina_daily_kline",
         "tinyright_iopv"
