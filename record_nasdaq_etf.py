@@ -1356,8 +1356,8 @@ def validate_timing(rows: list[dict], now: dt.datetime, force: bool) -> str | No
 
     today = now.date()
     for item in rows:
-        if item["quote_date"] != today:
-            return f"{item['code']} quote date is {item['quote_date']}, not {today}"
+        if item["trade_date"] != today:
+            return f"{item['code']} trade date is {item['trade_date']}, not {today}"
     return None
 
 
