@@ -170,89 +170,141 @@ function BenchmarkDrawdownSummary({ records, order }: { records: BenchmarkRecord
   return <div className="drawdown-grid">{items.length ? items : <div className="drawdown-item">暂无回撤数据</div>}</div>;
 }
 
-function EtfTable({ records }: { records: EtfRecord[] }) {
-  const groups = groupByDate(records, "trade_date");
+const PAGE_SIZE = 10;
+
+function PaginationBar({ visible, total, onLoadMore, onCollapse }: {
+  visible: number;
+  total: number;
+  onLoadMore: () => void;
+  onCollapse: () => void;
+}) {
+  if (total <= PAGE_SIZE) return null;
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>交易日期</th>
-          <th>代码</th>
-          <th>名称</th>
-          <th>当前价格</th>
-          <th>当天涨幅</th>
-          <th>当前净值</th>
-          <th>溢价率</th>
-          <th>走势</th>
-        </tr>
-      </thead>
-      <tbody>
-        {groups.length ? (
-          groups.flatMap(({ date, rows }) =>
-            rows.map((row, index) => (
-              <tr key={`${row.trade_date}-${row.code}`}>
-                {index === 0 && (
-                  <td className="date-cell" rowSpan={rows.length}>
-                    {date}
-                  </td>
-                )}
-                <td className="mono">{row.code}</td>
-                <td>{row.name}</td>
-                <td className="num">{fmtNumber(row.price, 3)}</td>
-                <td className={signedPctClass(row.daily_change)}>{fmtPct(row.daily_change)}</td>
-                <td className="num">{fmtNumber(row.estimate, 4)}</td>
-                <td className={signedPctClass(row.premium)}>{fmtPct(row.premium)}</td>
-                <td><TrendSparkline trend={row.trend} /></td>
-              </tr>
-            ))
-          )
-        ) : (
-          <tr className="empty"><td colSpan={8}>暂无记录</td></tr>
-        )}
-      </tbody>
-    </table>
+    <div className="pagination-bar">
+      <span className="pagination-info">已展示 {visible} / {total} 组</span>
+      {visible < total && (
+        <button className="pagination-btn" type="button" onClick={onLoadMore}>
+          加载更多 (+{Math.min(PAGE_SIZE, total - visible)})
+        </button>
+      )}
+      {visible > PAGE_SIZE && (
+        <button className="pagination-btn pagination-collapse" type="button" onClick={onCollapse}>
+          收起
+        </button>
+      )}
+    </div>
   );
 }
 
-function BenchmarkTable({ records }: { records: BenchmarkRecord[] }) {
-  const groups = groupByDate(records, "quote_date");
+function EtfTable({ records, visibleGroups, setVisibleGroups }: {
+  records: EtfRecord[];
+  visibleGroups: number;
+  setVisibleGroups: React.Dispatch<React.SetStateAction<number>>;
+}) {
+  const groups = groupByDate(records, "trade_date");
+  const visible = groups.slice(0, visibleGroups);
+  const total = groups.length;
+
+  const handleLoadMore = () => setVisibleGroups((prev) => Math.min(prev + PAGE_SIZE, total));
+  const handleCollapse = () => setVisibleGroups(PAGE_SIZE);
+
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>交易日期</th>
-          <th>标的</th>
-          <th>名称</th>
-          <th>当前点位/价格</th>
-          <th>当天涨幅</th>
-          <th>跟踪日期</th>
-          <th>走势</th>
-        </tr>
-      </thead>
-      <tbody>
-        {groups.length ? (
-          groups.flatMap(({ date, rows }) =>
-            rows.map((row, index) => (
-              <tr key={`${row.quote_date}-${row.track_date}-${row.symbol}`}>
-                {index === 0 && (
-                  <td className="date-cell" rowSpan={rows.length}>
-                    {date}
-                  </td>
-                )}
-                <td className="mono">{row.symbol}</td>
-                <td>{row.name}</td>
-                <td className="num">{fmtNumber(row.value, 2)}</td>
-                <td className={signedPctClass(row.daily_change)}>{fmtPct(row.daily_change)}</td>
-                <td>{row.track_date}</td>
-                <td><TrendSparkline trend={row.trend} /></td>
-              </tr>
-            ))
-          )
-        ) : (
-          <tr className="empty"><td colSpan={7}>暂无记录</td></tr>
-        )}
-      </tbody>
-    </table>
+    <>
+      <table>
+        <thead>
+          <tr>
+            <th>交易日期</th>
+            <th>代码</th>
+            <th>名称</th>
+            <th>当前价格</th>
+            <th>当天涨幅</th>
+            <th>当前净值</th>
+            <th>溢价率</th>
+            <th>走势</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visible.length ? (
+            visible.flatMap(({ date, rows }) =>
+              rows.map((row, index) => (
+                <tr key={`${row.trade_date}-${row.code}`}>
+                  {index === 0 && (
+                    <td className="date-cell" rowSpan={rows.length}>
+                      {date}
+                    </td>
+                  )}
+                  <td className="mono">{row.code}</td>
+                  <td>{row.name}</td>
+                  <td className="num">{fmtNumber(row.price, 3)}</td>
+                  <td className={signedPctClass(row.daily_change)}>{fmtPct(row.daily_change)}</td>
+                  <td className="num">{fmtNumber(row.estimate, 4)}</td>
+                  <td className={signedPctClass(row.premium)}>{fmtPct(row.premium)}</td>
+                  <td><TrendSparkline trend={row.trend} /></td>
+                </tr>
+              ))
+            )
+          ) : (
+            <tr className="empty"><td colSpan={8}>暂无记录</td></tr>
+          )}
+        </tbody>
+      </table>
+      <PaginationBar visible={visibleGroups} total={total} onLoadMore={handleLoadMore} onCollapse={handleCollapse} />
+    </>
+  );
+}
+
+function BenchmarkTable({ records, visibleGroups, setVisibleGroups }: {
+  records: BenchmarkRecord[];
+  visibleGroups: number;
+  setVisibleGroups: React.Dispatch<React.SetStateAction<number>>;
+}) {
+  const groups = groupByDate(records, "quote_date");
+  const visible = groups.slice(0, visibleGroups);
+  const total = groups.length;
+
+  const handleLoadMore = () => setVisibleGroups((prev) => Math.min(prev + PAGE_SIZE, total));
+  const handleCollapse = () => setVisibleGroups(PAGE_SIZE);
+
+  return (
+    <>
+      <table>
+        <thead>
+          <tr>
+            <th>交易日期</th>
+            <th>标的</th>
+            <th>名称</th>
+            <th>当前点位/价格</th>
+            <th>当天涨幅</th>
+            <th>跟踪日期</th>
+            <th>走势</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visible.length ? (
+            visible.flatMap(({ date, rows }) =>
+              rows.map((row, index) => (
+                <tr key={`${row.quote_date}-${row.track_date}-${row.symbol}`}>
+                  {index === 0 && (
+                    <td className="date-cell" rowSpan={rows.length}>
+                      {date}
+                    </td>
+                  )}
+                  <td className="mono">{row.symbol}</td>
+                  <td>{row.name}</td>
+                  <td className="num">{fmtNumber(row.value, 2)}</td>
+                  <td className={signedPctClass(row.daily_change)}>{fmtPct(row.daily_change)}</td>
+                  <td>{row.track_date}</td>
+                  <td><TrendSparkline trend={row.trend} /></td>
+                </tr>
+              ))
+            )
+          ) : (
+            <tr className="empty"><td colSpan={7}>暂无记录</td></tr>
+          )}
+        </tbody>
+      </table>
+      <PaginationBar visible={visibleGroups} total={total} onLoadMore={handleLoadMore} onCollapse={handleCollapse} />
+    </>
   );
 }
 
@@ -285,6 +337,8 @@ function SourceTable({ appData }: { appData: NasdaqTrackingData }) {
 
 function App({ appData }: { appData: NasdaqTrackingData }) {
   const [activeTab, setActiveTab] = useState<TabKey>("etfs");
+  const [etfVisibleGroups, setEtfVisibleGroups] = useState(PAGE_SIZE);
+  const [benchmarkVisibleGroups, setBenchmarkVisibleGroups] = useState(PAGE_SIZE);
   const etfOrder = useMemo(() => orderMap(appData.etfs, "code"), [appData.etfs]);
   const benchmarkOrder = useMemo(() => orderMap(appData.benchmarks, "symbol"), [appData.benchmarks]);
   const etfRecords = useMemo(() => sortRows(appData.etf_records, "trade_date", "code", etfOrder), [appData.etf_records, etfOrder]);
@@ -319,7 +373,7 @@ function App({ appData }: { appData: NasdaqTrackingData }) {
         <section className="section-block">
           <EtfDrawdownSummary records={etfRecords} order={etfOrder} />
           <div className="table-wrap">
-            <EtfTable records={etfRecords} />
+            <EtfTable records={etfRecords} visibleGroups={etfVisibleGroups} setVisibleGroups={setEtfVisibleGroups} />
           </div>
         </section>
       )}
@@ -328,7 +382,7 @@ function App({ appData }: { appData: NasdaqTrackingData }) {
         <section className="section-block">
           <BenchmarkDrawdownSummary records={benchmarkRecords} order={benchmarkOrder} />
           <div className="table-wrap">
-            <BenchmarkTable records={benchmarkRecords} />
+            <BenchmarkTable records={benchmarkRecords} visibleGroups={benchmarkVisibleGroups} setVisibleGroups={setBenchmarkVisibleGroups} />
           </div>
           <p className="note">QQQ/NDX 回撤 = 当前点位或价格 / 历史最高收盘点或价 - 1。历史最高收盘由项目已有记录自行维护。</p>
         </section>
