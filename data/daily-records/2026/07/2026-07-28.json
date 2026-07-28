@@ -3,15 +3,15 @@
   "etf_records": [
     {
       "trade_date": "2026-07-28",
-      "recorded_at": "2026-07-28 17:53:34",
+      "recorded_at": "2026-07-28 17:55:35",
       "code": "513100",
-      "name": "纳指ETF国泰",
+      "name": "国泰纳指100",
       "price": 2.068,
       "daily_change": -0.0236,
       "estimate": 1.8987,
       "premium": 0.0892,
       "source_ids": [
-        "eastmoney_quote"
+        "westock_etf_detail"
       ],
       "trend": {
         "date": "2026-07-28",
@@ -280,15 +280,15 @@
     },
     {
       "trade_date": "2026-07-28",
-      "recorded_at": "2026-07-28 17:53:34",
+      "recorded_at": "2026-07-28 17:55:35",
       "code": "159501",
-      "name": "纳指ETF嘉实",
+      "name": "嘉实纳指100",
       "price": 1.945,
       "daily_change": -0.0192,
       "estimate": 1.7832,
       "premium": 0.0907,
       "source_ids": [
-        "eastmoney_quote"
+        "westock_etf_detail"
       ],
       "trend": {
         "date": "2026-07-28",
@@ -557,15 +557,15 @@
     },
     {
       "trade_date": "2026-07-28",
-      "recorded_at": "2026-07-28 17:53:34",
+      "recorded_at": "2026-07-28 17:55:35",
       "code": "159659",
-      "name": "纳斯达克100ETF招商",
+      "name": "招商纳指100",
       "price": 2.18,
       "daily_change": -0.0264,
       "estimate": 2.0503,
       "premium": 0.0632,
       "source_ids": [
-        "eastmoney_quote"
+        "westock_etf_detail"
       ],
       "trend": {
         "date": "2026-07-28",
