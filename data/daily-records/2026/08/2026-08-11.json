@@ -1,0 +1,250 @@
+{
+  "date": "2026-08-11",
+  "etf_records": [
+    {
+      "trade_date": "2026-08-11",
+      "recorded_at": "2026-08-12 09:17:47",
+      "code": "513100",
+      "name": "纳指ETF国泰",
+      "price": 2.215,
+      "daily_change": -0.020344980097302234,
+      "estimate": 2.0047,
+      "premium": 0.10490347682945056,
+      "source_ids": [
+        "sina_daily_kline",
+        "tinyright_iopv"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-08-11",
+      "recorded_at": "2026-08-12 09:17:47",
+      "code": "159501",
+      "name": "纳指ETF嘉实",
+      "price": 2.087,
+      "daily_change": -0.012304779933743348,
+      "estimate": 1.8826,
+      "premium": 0.10857324976096905,
+      "source_ids": [
+        "sina_daily_kline",
+        "tinyright_iopv"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-08-11",
+      "recorded_at": "2026-08-12 09:17:47",
+      "code": "159659",
+      "name": "纳斯达克100ETF招商",
+      "price": 2.343,
+      "daily_change": -0.013473684210526304,
+      "estimate": 2.1648,
+      "premium": 0.08231707317073167,
+      "source_ids": [
+        "sina_daily_kline",
+        "tinyright_iopv"
+      ],
+      "trend": {
+        "date": "2026-08-11",
+        "source_ids": [
+          "sina_minute_kline"
+        ],
+        "points": [
+          {
+            "time": "09:35",
+            "value": 2.359
+          },
+          {
+            "time": "09:40",
+            "value": 2.358
+          },
+          {
+            "time": "09:45",
+            "value": 2.358
+          },
+          {
+            "time": "09:50",
+            "value": 2.361
+          },
+          {
+            "time": "09:55",
+            "value": 2.357
+          },
+          {
+            "time": "10:00",
+            "value": 2.357
+          },
+          {
+            "time": "10:05",
+            "value": 2.353
+          },
+          {
+            "time": "10:10",
+            "value": 2.351
+          },
+          {
+            "time": "10:15",
+            "value": 2.351
+          },
+          {
+            "time": "10:20",
+            "value": 2.352
+          },
+          {
+            "time": "10:25",
+            "value": 2.352
+          },
+          {
+            "time": "10:30",
+            "value": 2.353
+          },
+          {
+            "time": "10:35",
+            "value": 2.351
+          },
+          {
+            "time": "10:40",
+            "value": 2.349
+          },
+          {
+            "time": "10:45",
+            "value": 2.35
+          },
+          {
+            "time": "10:50",
+            "value": 2.35
+          },
+          {
+            "time": "10:55",
+            "value": 2.35
+          },
+          {
+            "time": "11:00",
+            "value": 2.35
+          },
+          {
+            "time": "11:05",
+            "value": 2.351
+          },
+          {
+            "time": "11:10",
+            "value": 2.352
+          },
+          {
+            "time": "11:15",
+            "value": 2.351
+          },
+          {
+            "time": "11:20",
+            "value": 2.35
+          },
+          {
+            "time": "11:25",
+            "value": 2.352
+          },
+          {
+            "time": "11:30",
+            "value": 2.353
+          },
+          {
+            "time": "13:05",
+            "value": 2.352
+          },
+          {
+            "time": "13:10",
+            "value": 2.351
+          },
+          {
+            "time": "13:15",
+            "value": 2.352
+          },
+          {
+            "time": "13:20",
+            "value": 2.352
+          },
+          {
+            "time": "13:25",
+            "value": 2.353
+          },
+          {
+            "time": "13:30",
+            "value": 2.352
+          },
+          {
+            "time": "13:35",
+            "value": 2.351
+          },
+          {
+            "time": "13:40",
+            "value": 2.352
+          },
+          {
+            "time": "13:45",
+            "value": 2.353
+          },
+          {
+            "time": "13:50",
+            "value": 2.351
+          },
+          {
+            "time": "13:55",
+            "value": 2.35
+          },
+          {
+            "time": "14:00",
+            "value": 2.35
+          },
+          {
+            "time": "14:05",
+            "value": 2.351
+          },
+          {
+            "time": "14:10",
+            "value": 2.351
+          },
+          {
+            "time": "14:15",
+            "value": 2.351
+          },
+          {
+            "time": "14:20",
+            "value": 2.349
+          },
+          {
+            "time": "14:25",
+            "value": 2.347
+          },
+          {
+            "time": "14:30",
+            "value": 2.343
+          },
+          {
+            "time": "14:35",
+            "value": 2.341
+          },
+          {
+            "time": "14:40",
+            "value": 2.343
+          },
+          {
+            "time": "14:45",
+            "value": 2.344
+          },
+          {
+            "time": "14:50",
+            "value": 2.343
+          },
+          {
+            "time": "14:55",
+            "value": 2.342
+          },
+          {
+            "time": "15:00",
+            "value": 2.343
+          }
+        ]
+      }
+    }
+  ],
+  "benchmark_records": []
+}

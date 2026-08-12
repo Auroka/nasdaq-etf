@@ -43,6 +43,12 @@
       "url_template": "https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20_{symbol}_240=/CN_MarketData.getKLineData?symbol={symbol}&scale=240&ma=no&datalen={count}"
     },
     {
+      "id": "eastmoney_fund_nav",
+      "name": "东方财富基金净值",
+      "purpose": "A股纳指 ETF 历史净值回填（tinyright 估值日期不匹配时使用）",
+      "url_template": "https://api.fund.eastmoney.com/f10/lsjz?callback=&fundCode={code}&pageIndex=1&pageSize=1&startDate={date}&endDate={date}"
+    },
+    {
       "id": "eastmoney_trend",
       "name": "东方财富分钟走势",
       "purpose": "A股纳指 ETF 当天分钟走势折线图（备用）",
