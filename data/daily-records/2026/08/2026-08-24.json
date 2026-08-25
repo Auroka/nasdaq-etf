@@ -833,5 +833,566 @@
       }
     }
   ],
-  "benchmark_records": []
+  "benchmark_records": [
+    {
+      "track_date": "2026-08-25",
+      "recorded_at": "2026-08-25 15:30:43",
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "value": 706.32,
+      "daily_change": -0.00997981610226506,
+      "history_high": 732.07,
+      "drawdown": -0.035174231972352366,
+      "history_high_date": "2026-08-13",
+      "quote_date": "2026-08-24",
+      "unit": "USD",
+      "source_ids": [
+        "nasdaq_api_historical"
+      ],
+      "trend": {
+        "date": "2026-08-24",
+        "source_ids": [
+          "nasdaq_api_chart"
+        ],
+        "points": [
+          {
+            "time": "9:30 AM",
+            "value": 707.14
+          },
+          {
+            "time": "9:36 AM",
+            "value": 707.33
+          },
+          {
+            "time": "9:42 AM",
+            "value": 704.76
+          },
+          {
+            "time": "9:49 AM",
+            "value": 703.72
+          },
+          {
+            "time": "9:55 AM",
+            "value": 704.29
+          },
+          {
+            "time": "10:01 AM",
+            "value": 704.5
+          },
+          {
+            "time": "10:07 AM",
+            "value": 703.7298
+          },
+          {
+            "time": "10:13 AM",
+            "value": 703.21
+          },
+          {
+            "time": "10:20 AM",
+            "value": 703.88
+          },
+          {
+            "time": "10:26 AM",
+            "value": 703.6588
+          },
+          {
+            "time": "10:32 AM",
+            "value": 705.07
+          },
+          {
+            "time": "10:38 AM",
+            "value": 706.045
+          },
+          {
+            "time": "10:44 AM",
+            "value": 706.03
+          },
+          {
+            "time": "10:50 AM",
+            "value": 706.19
+          },
+          {
+            "time": "10:57 AM",
+            "value": 706.07
+          },
+          {
+            "time": "11:03 AM",
+            "value": 705.3899
+          },
+          {
+            "time": "11:09 AM",
+            "value": 705.34
+          },
+          {
+            "time": "11:15 AM",
+            "value": 705.04
+          },
+          {
+            "time": "11:21 AM",
+            "value": 705.31
+          },
+          {
+            "time": "11:28 AM",
+            "value": 706.34
+          },
+          {
+            "time": "11:34 AM",
+            "value": 707.15
+          },
+          {
+            "time": "11:40 AM",
+            "value": 708.13
+          },
+          {
+            "time": "11:46 AM",
+            "value": 708.63
+          },
+          {
+            "time": "11:52 AM",
+            "value": 708.42
+          },
+          {
+            "time": "11:59 AM",
+            "value": 707.99
+          },
+          {
+            "time": "12:05 PM",
+            "value": 707.87
+          },
+          {
+            "time": "12:11 PM",
+            "value": 707.92
+          },
+          {
+            "time": "12:17 PM",
+            "value": 708.66
+          },
+          {
+            "time": "12:23 PM",
+            "value": 708.825
+          },
+          {
+            "time": "12:30 PM",
+            "value": 708.83
+          },
+          {
+            "time": "12:36 PM",
+            "value": 708.675
+          },
+          {
+            "time": "12:42 PM",
+            "value": 708.13
+          },
+          {
+            "time": "12:48 PM",
+            "value": 708.21
+          },
+          {
+            "time": "12:54 PM",
+            "value": 708.285
+          },
+          {
+            "time": "1:00 PM",
+            "value": 707.905
+          },
+          {
+            "time": "1:07 PM",
+            "value": 708.5
+          },
+          {
+            "time": "1:13 PM",
+            "value": 708.58
+          },
+          {
+            "time": "1:19 PM",
+            "value": 707.9331
+          },
+          {
+            "time": "1:25 PM",
+            "value": 707.29
+          },
+          {
+            "time": "1:31 PM",
+            "value": 707.14
+          },
+          {
+            "time": "1:38 PM",
+            "value": 706.85
+          },
+          {
+            "time": "1:44 PM",
+            "value": 706.78
+          },
+          {
+            "time": "1:50 PM",
+            "value": 707.32
+          },
+          {
+            "time": "1:56 PM",
+            "value": 706.89
+          },
+          {
+            "time": "2:02 PM",
+            "value": 707.44
+          },
+          {
+            "time": "2:09 PM",
+            "value": 708.255
+          },
+          {
+            "time": "2:15 PM",
+            "value": 708.46
+          },
+          {
+            "time": "2:21 PM",
+            "value": 708.715
+          },
+          {
+            "time": "2:27 PM",
+            "value": 709.07
+          },
+          {
+            "time": "2:33 PM",
+            "value": 709.28
+          },
+          {
+            "time": "2:40 PM",
+            "value": 708.47
+          },
+          {
+            "time": "2:46 PM",
+            "value": 708.2661
+          },
+          {
+            "time": "2:52 PM",
+            "value": 708.02
+          },
+          {
+            "time": "2:58 PM",
+            "value": 707.78
+          },
+          {
+            "time": "3:04 PM",
+            "value": 707.6574
+          },
+          {
+            "time": "3:10 PM",
+            "value": 707.42
+          },
+          {
+            "time": "3:17 PM",
+            "value": 707.52
+          },
+          {
+            "time": "3:23 PM",
+            "value": 707.685
+          },
+          {
+            "time": "3:29 PM",
+            "value": 707.71
+          },
+          {
+            "time": "3:35 PM",
+            "value": 707.1
+          },
+          {
+            "time": "3:41 PM",
+            "value": 707.06
+          },
+          {
+            "time": "3:48 PM",
+            "value": 706.99
+          },
+          {
+            "time": "3:54 PM",
+            "value": 706.895
+          },
+          {
+            "time": "4:00 PM",
+            "value": 706.32
+          }
+        ]
+      }
+    },
+    {
+      "track_date": "2026-08-25",
+      "recorded_at": "2026-08-25 15:30:43",
+      "symbol": "NDX",
+      "name": "Nasdaq 100 Index",
+      "value": 29023.18,
+      "daily_change": -0.0097472231946244,
+      "history_high": 30084.5,
+      "drawdown": -0.03527796705944919,
+      "history_high_date": "2026-08-13",
+      "quote_date": "2026-08-24",
+      "unit": "points",
+      "source_ids": [
+        "nasdaq_api_historical"
+      ],
+      "trend": {
+        "date": "2026-08-24",
+        "source_ids": [
+          "nasdaq_api_chart"
+        ],
+        "points": [
+          {
+            "time": "9:30 AM",
+            "value": 29052.2
+          },
+          {
+            "time": "9:36 AM",
+            "value": 29057.31
+          },
+          {
+            "time": "9:42 AM",
+            "value": 28958.53
+          },
+          {
+            "time": "9:50 AM",
+            "value": 28915.91
+          },
+          {
+            "time": "9:55 AM",
+            "value": 28940.46
+          },
+          {
+            "time": "10:01 AM",
+            "value": 28948.57
+          },
+          {
+            "time": "10:07 AM",
+            "value": 28910.68
+          },
+          {
+            "time": "10:13 AM",
+            "value": 28893.3
+          },
+          {
+            "time": "10:20 AM",
+            "value": 28918.7
+          },
+          {
+            "time": "10:26 AM",
+            "value": 28913.78
+          },
+          {
+            "time": "10:32 AM",
+            "value": 28973.15
+          },
+          {
+            "time": "10:38 AM",
+            "value": 29007.15
+          },
+          {
+            "time": "10:44 AM",
+            "value": 29010.29
+          },
+          {
+            "time": "10:50 AM",
+            "value": 29016.42
+          },
+          {
+            "time": "10:57 AM",
+            "value": 29019.14
+          },
+          {
+            "time": "11:03 AM",
+            "value": 28985.03
+          },
+          {
+            "time": "11:09 AM",
+            "value": 28985.98
+          },
+          {
+            "time": "11:15 AM",
+            "value": 28969.9
+          },
+          {
+            "time": "11:21 AM",
+            "value": 28977.18
+          },
+          {
+            "time": "11:28 AM",
+            "value": 29018.3
+          },
+          {
+            "time": "11:34 AM",
+            "value": 29053.57
+          },
+          {
+            "time": "11:40 AM",
+            "value": 29100.42
+          },
+          {
+            "time": "11:46 AM",
+            "value": 29114.9
+          },
+          {
+            "time": "11:52 AM",
+            "value": 29108.33
+          },
+          {
+            "time": "12:00 PM",
+            "value": 29093.65
+          },
+          {
+            "time": "12:05 PM",
+            "value": 29088.09
+          },
+          {
+            "time": "12:11 PM",
+            "value": 29090.32
+          },
+          {
+            "time": "12:17 PM",
+            "value": 29121.05
+          },
+          {
+            "time": "12:23 PM",
+            "value": 29124.71
+          },
+          {
+            "time": "12:30 PM",
+            "value": 29122.81
+          },
+          {
+            "time": "12:36 PM",
+            "value": 29117.32
+          },
+          {
+            "time": "12:42 PM",
+            "value": 29098.48
+          },
+          {
+            "time": "12:48 PM",
+            "value": 29102.89
+          },
+          {
+            "time": "12:54 PM",
+            "value": 29101.36
+          },
+          {
+            "time": "1:00 PM",
+            "value": 29088.09
+          },
+          {
+            "time": "1:07 PM",
+            "value": 29109.41
+          },
+          {
+            "time": "1:13 PM",
+            "value": 29118.12
+          },
+          {
+            "time": "1:20 PM",
+            "value": 29090.59
+          },
+          {
+            "time": "1:25 PM",
+            "value": 29060.04
+          },
+          {
+            "time": "1:31 PM",
+            "value": 29056.04
+          },
+          {
+            "time": "1:38 PM",
+            "value": 29045.27
+          },
+          {
+            "time": "1:44 PM",
+            "value": 29043.69
+          },
+          {
+            "time": "1:50 PM",
+            "value": 29062.69
+          },
+          {
+            "time": "1:56 PM",
+            "value": 29045.18
+          },
+          {
+            "time": "2:02 PM",
+            "value": 29068.38
+          },
+          {
+            "time": "2:09 PM",
+            "value": 29101.54
+          },
+          {
+            "time": "2:15 PM",
+            "value": 29113.89
+          },
+          {
+            "time": "2:21 PM",
+            "value": 29118.31
+          },
+          {
+            "time": "2:27 PM",
+            "value": 29136.44
+          },
+          {
+            "time": "2:33 PM",
+            "value": 29145.07
+          },
+          {
+            "time": "2:40 PM",
+            "value": 29109.74
+          },
+          {
+            "time": "2:46 PM",
+            "value": 29100.05
+          },
+          {
+            "time": "2:52 PM",
+            "value": 29092.57
+          },
+          {
+            "time": "2:58 PM",
+            "value": 29082.16
+          },
+          {
+            "time": "3:04 PM",
+            "value": 29076.08
+          },
+          {
+            "time": "3:10 PM",
+            "value": 29065.56
+          },
+          {
+            "time": "3:17 PM",
+            "value": 29070.0
+          },
+          {
+            "time": "3:23 PM",
+            "value": 29080.36
+          },
+          {
+            "time": "3:29 PM",
+            "value": 29079.01
+          },
+          {
+            "time": "3:35 PM",
+            "value": 29053.18
+          },
+          {
+            "time": "3:41 PM",
+            "value": 29050.77
+          },
+          {
+            "time": "3:48 PM",
+            "value": 29049.04
+          },
+          {
+            "time": "3:54 PM",
+            "value": 29042.76
+          },
+          {
+            "time": "4:00 PM",
+            "value": 29023.18
+          }
+        ]
+      }
+    }
+  ]
 }
