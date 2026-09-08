@@ -232,53 +232,6 @@ td.source-url {
   color: var(--text);
 }
 
-.trend-cell {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 148px;
-  min-height: 48px;
-  gap: 2px;
-}
-
-.trend-cell svg {
-  width: 132px;
-  height: 42px;
-  overflow: visible;
-}
-
-.trend-up, .trend-down {
-  fill: none;
-  stroke: var(--green);
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.trend-fill {
-  fill: rgba(6, 118, 71, 0.1);
-  stroke: none;
-}
-
-.trend-date {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1;
-}
-
-.trend-empty {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 132px;
-  min-height: 42px;
-  color: var(--muted);
-  border: 1px dashed var(--line);
-  background: #f8fafc;
-  font-size: 12px;
-}
-
 .empty td {
   text-align: center;
   color: var(--muted);

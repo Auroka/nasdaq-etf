@@ -2,7 +2,9 @@
 
 纳斯达克 100 指数跟踪工具。记录三只 A 股纳指 ETF 的交易日收盘后数据，同时跟踪 QQQ 和 NDX 距离历史最高收盘点/价的回撤，并生成一个可通过本地 HTTP 服务或 GitHub Pages 查看的 HTML 页面。
 
-完整的项目架构、数据口径、日常更新、历史补录、分钟走势修复、自动任务和故障排查说明见 [项目交接文档](docs/HANDOFF.md)。
+完整的项目架构、数据口径、日常更新、历史补录、自动任务和故障排查说明见 [项目交接文档](docs/HANDOFF.md)。
+
+> **走势图已下线（2026-09-08）**：页面不再展示分时走势，采集流程不再获取分钟数据；历史记录中已有的 `trend` 字段原样保留但不使用。`--refresh-trends` 已弃用（no-op）。
 
 ## 记录对象
 
@@ -50,15 +52,16 @@
 
 历史最高收盘由项目已有记录自行维护：每次写入新记录时，将当前收盘值与已有历史最高比较，取较大值。不使用盘中最高价。
 
-QQQ/NDX 分钟走势只展示美股常规交易时段，最终点与表格使用的官方收盘价一致。
-
 ## 数据源配置
 
-主数据源（腾讯自选股）和备用数据源（东方财富、新浪财经、Nasdaq 官方、Yahoo Finance）统一维护在：
+所有行情数据一律通过**腾讯自选股连接器（westock MCP）**获取，不再从 HTTP 行情网站抓取。数据源与跟踪标的统一维护在：
 
 ```text
 data_sources.json
 ```
+
+- 活跃源（唯一取数源）：`westock_quote`（行情/收盘）、`westock_etf_detail`（ETF 净值/估值）、`westock_kline`（历史 K 线）。分时走势（`westock_minute`）自 2026-09-08 起不再采集。
+- 东方财富、新浪财经、腾讯证券、Nasdaq 官方、Yahoo Finance 等 HTTP 源已停用（`retired`），仅保留供历史记录 `source_ids` 引用和页面数据源表展示，不再作为取数通道。
 
 页面展示用的记录数据单独维护在：
 
@@ -94,8 +97,7 @@ python record_nasdaq_etf.py
 python record_nasdaq_etf.py --backfill-date 2026-06-01
 ```
 
-ETF 价格和涨幅优先使用腾讯自选股实时行情和历史 K 线，不可用时回退东方财富。
-ETF 溢价率通过腾讯自选股 ETF 详情的 `nav` 字段按 `price / nav - 1` 计算。
+ETF 价格、涨幅、历史 K 线优先使用腾讯自选股连接器（westock），溢价率通过 `estimate`/净值按 `price / estimate - 1` 计算。不再主动访问东方财富、新浪等 HTTP 行情站（仅作最后兜底）。
 
 刷新并补齐已记录 ETF 交易日对应的 QQQ/NDX 回撤口径：
 
@@ -109,21 +111,13 @@ python record_nasdaq_etf.py --refresh-benchmarks
 python record_nasdaq_etf.py --backfill-benchmark-date 2026-06-12
 ```
 
-补已记录数据中的分钟走势；ETF 和 QQQ/NDX 均优先使用腾讯自选股分时，不可用时按东方财富、腾讯证券分时、新浪分钟 K 线、Yahoo 的顺序兜底：
+补已记录数据中的分钟走势功能已随走势图下线（2026-09-08）停用：
 
 ```powershell
 python record_nasdaq_etf.py --refresh-trends
 ```
 
-ETF 走势必须覆盖开盘到收盘，最终点与表格的 `15:00` 收盘价一致。
-
-Yahoo 分钟走势兜底默认开启；如需临时关闭 Yahoo 备用源，设置 `NASDAQ_ETF_ENABLE_YAHOO_INTRADAY=0`。
-
-如果 Python 客户端被 Yahoo Finance 拦截导致历史分钟走势无法补齐，在当前 PowerShell 会话中执行兜底脚本：
-
-```powershell
-& .\scripts\refresh_yahoo_intraday_trends.ps1
-```
+> 该命令现为 no-op（仅保留参数兼容），不再抓取任何分时/分钟数据。历史记录中已有的 `trend` 原样保留，不做清理。
 
 输出文件：
 

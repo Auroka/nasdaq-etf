@@ -2,6 +2,8 @@
 
 本文面向接手维护本项目的 Agent 或开发者。目标是让接手者不依赖历史对话，也能理解项目用途、数据口径、运行方式、更新流程和常见故障。
 
+> **2026-09-08 变更：走势图已下线。** 页面不再展示分时走势列，采集/回填流程不再抓取任何分时分钟数据（`data_minute`/`westock_minute`/HTTP 分钟源一律不用）。历史每日 JSON 中已存的 `trend` 字段原样保留、不再使用；新写入记录 `trend` 为 `null`。`--refresh-trends` 已弃用为 no-op。下文所有「分钟走势/分时/走势图」相关章节均为历史遗留说明，不再作为操作依据。
+
 ## 1. 项目概览
 
 ### 1.1 项目做什么
@@ -21,7 +23,6 @@
 - 当天涨幅
 - 当前净值（来自腾讯自选股 ETF 详情 `nav` 字段，替代原来的 T-1 估值）
 - 相对净值的溢价率
-- 当天分钟走势
 - 实际使用的数据源
 
 第二组是两个美股基准：
@@ -313,69 +314,65 @@ QQQ/NDX：quote_date + symbol
 
 重复运行同一日期不会产生重复行。注意 QQQ/NDX 的覆盖键不包含 `track_date`，同一 `quote_date + symbol` 只能保留一条记录。
 
-## 6. 数据源与回退顺序
+## 6. 数据源（唯一取数源：westock MCP）
 
 完整接口地址和标的配置以 `data_sources.json` 为唯一准确信息。
 
-主数据源为腾讯自选股（westock-mcp），无法直接从 westock 获取的数据使用以下备用源。
+> **2026-09-03 用户强制约定（最高优先）**：所有行情数据一律通过腾讯自选股连接器（westock MCP）获取，不再从 HTTP 行情网站抓取。下方 westock 工具已实测覆盖本项目全部需求（ETF 三只 + QQQ/NDX 的收盘价、涨幅、估值、分时、历史最高）。`data_sources.json` 中 eastmoney/sina/tencent/yahoo/nasdaq 等 HTTP 源已标记 `retired`，仅保留供历史记录 `source_ids` 引用，不作为取数通道。
+
+### 6.0 westock 工具对照表
+
+| 需求 | westock 工具 | 代码 |
+| --- | --- | --- |
+| 实时/历史日快照（收盘、涨幅） | `data_quote`（支持 `date=YYYY-MM-DD`） | `sh513100` / `sz159501` / `sz159659` / `usQQQ.OQ` / `usNDX` |
+| ETF 估值/净值（estimate） | `data_etf`（nav 字段） | `sh513100` 等 |
+| 历史日 K（回填、history_high/回撤） | `data_kline`（period=day, start/end） | 同上 |
+| 分时走势 | `data_minute`（days=N，覆盖近 N 交易日完整分时） | 同上 |
+| 代码/名称搜索 | `data_search` | — |
+
+QQQ 用 `usQQQ.OQ`，NDX 用 `usNDX`（勿用裸 NDX）。
 
 ### 6.1 当日 ETF 表格数据
 
-| 数据 | 首选 | 备用 |
-| --- | --- | --- |
-| 价格、涨幅 | `westock_quote` (腾讯自选股) | `eastmoney_quote` |
-| 净值（estimate） | `westock_etf_detail` (腾讯自选股 ETF 详情 `nav` 字段) | 无静默替代，缺失则失败 |
+| 数据 | 取数源 |
+| --- | --- |
+| 价格、涨幅 | `westock_quote`（`data_quote`，腾讯自选股） |
+| 净值（estimate） | `westock_etf_detail`（`data_etf` 的 `nav` 字段） |
 
-溢价率由脚本直接按 `price / estimate - 1` 计算，不依赖外部估值服务或接口返回的溢折价率。
+溢价率直接按 `price / estimate - 1` 计算，不依赖外部估值服务或接口返回的溢折价率。
 
 ### 6.2 历史 ETF 补录
 
-| 数据 | 顺序 |
+| 数据 | 取数源 |
 | --- | --- |
-| 历史收盘和涨幅 | `westock_kline` -> `eastmoney_kline` -> `sina_daily_kline` |
-| 净值（estimate） | `westock_etf_detail`，记录写入时刻的最新可用净值 |
+| 历史收盘和涨幅 | `data_kline` / `data_quote`(date=)，腾讯自选股 |
+| 净值（estimate） | `data_etf`，记录写入时刻的最新可用净值 |
 
 净值与 T-1 IOPV 数值一致，历史补录时使用写入时刻 westock 返回的最新净值。不再需要历史净值日期精确匹配。
 
 ### 6.3 ETF 分钟走势
 
 ```text
-westock_minute (腾讯自选股分时，主数据源)
-  -> eastmoney_trend
-  -> tencent_minute（只用于执行当天）
-  -> sina_minute_kline
-  -> yahoo_intraday_chart
+westock_minute (data_minute，腾讯自选股分时，唯一取数源)
 ```
 
-Yahoo 兜底默认开启。临时禁用：
-
-```powershell
-$env:NASDAQ_ETF_ENABLE_YAHOO_INTRADAY = "0"
-python record_nasdaq_etf.py --refresh-trends
-Remove-Item Env:NASDAQ_ETF_ENABLE_YAHOO_INTRADAY
-```
+`data_minute` 的 `days=3` 返回近 3 个交易日完整分时（含目标日）。早盘 9:30-10:30 缺失 = 高溢价临时停牌（10:30 复牌，首 bar ≈10:35），不算缺口、不补。
 
 ### 6.4 QQQ/NDX 日线与回撤
 
 ```text
-westock_quote / westock_kline (腾讯自选股)
-  -> nasdaq_api_historical
-  -> yahoo_chart
+westock_quote / westock_kline (data_quote / data_kline，腾讯自选股)
 ```
 
-QQQ 代码：`usQQQ`，NDX 代码：`usNDX`。腾讯自选股直接支持这两个美股的实时行情和历史 K 线。
-
-历史最高收盘由项目已有记录自行维护：每次记录时与已有 `history_high` 比较取较大值。初次建立或怀疑遗漏时，用 `westock_kline` 获取足量历史 K 线遍历 `last` 字段得出。
+历史最高收盘由项目已有记录自行维护：每次记录时与已有 `history_high` 比较取较大值。初次建立或怀疑遗漏时，用 `data_kline` 获取足量历史 K 线遍历 `last` 字段得出。
 
 ### 6.5 QQQ/NDX 分钟走势
 
 ```text
-westock_minute (腾讯自选股分时)
-  -> nasdaq_api_chart
-  -> yahoo_intraday_chart
+westock_minute (data_minute，腾讯自选股分时，唯一取数源)
 ```
 
-腾讯自选股分时返回美股常规交易时段（9:30 AM - 4:00 PM）的分钟数据。Nasdaq chart 和 Yahoo 数据作为备用时，最终点仍会与正式收盘值对齐。
+`data_minute` 返回美股常规交易时段（9:30 AM - 4:00 PM）的分钟数据，最终点与正式收盘值对齐。
 
 ## 7. 首次接手与本地启动
 
@@ -439,6 +436,10 @@ git pull --ff-only origin main
 只有工作区状态允许时才执行 `git pull --ff-only`。存在本地改动时先理解和保留这些改动。
 
 ### 8.2 采集当天数据
+
+取数主路径（会话/自动化执行）：用腾讯自选股连接器（westock MCP）的 `data_quote`（3 只 ETF + QQQ/NDX）、`data_etf`（估值）、`data_kline`（历史高/日 K）、`data_minute`（分时）取数，校验后写入每日 JSON 并重建页面。
+
+脚本兜底（仅无 westock 会话时）：
 
 ```powershell
 python record_nasdaq_etf.py
@@ -550,6 +551,8 @@ python record_nasdaq_etf.py --backfill-date 2026-06-01
 6. 生成或更新 ETF 和 QQQ/NDX 记录。
 7. 尝试补分钟走势。
 
+> 取数优先级（2026-09-03 用户强制约定）：**优先在会话中用腾讯自选股连接器（westock MCP：`data_quote`/`data_kline`/`data_minute`/`data_etf`）取数后回填**；`--backfill-date` 的脚本 HTTP 链仅在无 westock 会话或 westock 不可用时兜底。回填后必须用 `write_page_and_data` 重建 `index.html` + `manifest.json`（`read_records` 需传 `manifest.json` 路径）。
+
 建议先预览：
 
 ```powershell
@@ -594,15 +597,19 @@ foreach ($date in $dates) {
 
 ### 10.1 补缺失走势
 
+补分时优先用腾讯自选股连接器 `data_minute`（`days=3` 返回近 3 个交易日完整分时，含目标日复牌后段），在会话中取数后回填对应每日 JSON 的 `trend`，再重建页面；**不要先逐站重试 HTTP**。
+
+脚本兜底命令（HTTP 链，仅无 westock 时使用）：
+
 ```powershell
 python record_nasdaq_etf.py --refresh-trends
 ```
 
 该命令主要补 `trend` 为空的记录，并尝试重新获取超过 `64` 点的旧走势。重新获取成功的走势最多保留 `64` 点；请求失败时保留原记录。已有且不超过 `64` 点的走势会被保留，即使它的形状有问题也不会自动替换。
 
-### 10.2 Yahoo PowerShell 兜底
+### 10.2 Yahoo PowerShell 兜底（已停用）
 
-Python 客户端请求 Yahoo 被拒绝时：
+> 2026-09-03 起 Yahoo 分钟兜底停用，分时一律走腾讯自选股 `data_minute`。以下脚本仅作为历史遗留说明保留，不作为常规取数手段。
 
 ```powershell
 & .\scripts\refresh_yahoo_intraday_trends.ps1
@@ -616,9 +623,9 @@ Python 客户端请求 Yahoo 被拒绝时：
 
 1. 找到目标 `quote_date` 或 `trade_date` 对应的每日 JSON。
 2. 核对 `trend.date`、第一点、最后一点和 `source_ids`。
-3. 先尝试重新运行对应日期的 `--backfill-date`。
+3. 先尝试重新运行对应日期的 `--backfill-date`（或其 westock 等价取数流程）。
 4. 如果错误走势仍被保留，将目标行的 `trend` 设为 `null`，保持其他字段不变。
-5. 运行 `python record_nasdaq_etf.py --refresh-trends`。
+5. 用腾讯自选股连接器 `data_minute` 取该日分时回填，或运行 `python record_nasdaq_etf.py --refresh-trends` 兜底。
 6. 再次核对完整时间范围和最终收盘点。
 7. 只提交目标每日文件及随之更新的 `manifest.json`、`index.html`。
 
@@ -661,7 +668,7 @@ QQQ/NDX：
 | `python record_nasdaq_etf.py --backfill-benchmark-date YYYY-MM-DD` | 只补某个美股行情日 | 是 |
 | `python record_nasdaq_etf.py --track-date YYYY-MM-DD` | 配合基准补录指定跟踪日期 | 是 |
 | `python record_nasdaq_etf.py --refresh-benchmarks` | 重算已有基准行并补部分缺口 | 是 |
-| `python record_nasdaq_etf.py --refresh-trends` | 补缺失分钟走势 | 是 |
+| `python record_nasdaq_etf.py --refresh-trends` | 补缺失分钟走势（HTTP 兜底链；优先用 westock `data_minute` 在会话中回填） | 是 |
 | `python record_nasdaq_etf.py --output PATH` | 指定页面输出路径 | 取决于其他参数 |
 | `python record_nasdaq_etf.py --data-output PATH` | 指定数据索引输出路径 | 取决于其他参数 |
 | `python record_nasdaq_etf.py --source-config PATH` | 指定数据源配置 | 取决于其他参数 |
@@ -772,15 +779,14 @@ Automation ID：etf-2
 
 处理：
 
-1. 记录报错 URL 中的数据源域名。
-2. 稍后重试原命令。
-3. 检查 `data_sources.json` 中接口地址是否仍有效。
-4. 确认现有回退源是否被触发。
-5. 不要把接口失败误当成空数据写入。
+1. 优先改用腾讯自选股连接器（westock MCP）取数（`data_quote`/`data_kline`/`data_minute`/`data_etf`），不要再逐站重试 HTTP。
+2. 记录失败的数据源域名/接口到日志。
+3. 不要把接口失败误当成空数据写入。
+4. 若 westock 也失败，保留当日缺口，稍后重试原命令或待连接器恢复。
 
 ### 14.2 ETF 历史 K 线失败
 
-脚本先请求东方财富，失败后自动使用新浪日 K。若两者都失败，补录终止。不要手工填入未经来源确认的收盘价。
+腾讯自选股连接器 `data_kline` 优先；HTTP 兜底（东方财富→新浪）仅无 westock 会话时使用。若都失败，补录终止。不要手工填入未经来源确认的收盘价。
 
 ### 14.3 估值数据缺失
 
@@ -789,8 +795,8 @@ Automation ID：etf-2
 处理：
 
 1. 确认 ETF 代码是否正确（`sh513100` / `sz159501` / `sz159659`）。
-2. 稍后重试。腾讯自选股 ETF 详情接口返回的 `nav` 字段对应 QDII ETF 最新官方净值，与原来使用的 T-1 IOPV 数值一致。
-3. 若持续失败，检查 `data_sources.json` 中 westock 相关配置，回退到备用数据源。
+2. 稍后重试 westock `data_etf`。`nav` 字段对应 QDII ETF 最新官方净值，与原来使用的 T-1 IOPV 数值一致。
+3. 若持续失败，记录缺口等待连接器恢复，不要回退到 HTTP 估值源。
 
 ### 14.4 价格和涨幅正确，但溢价率错误
 
@@ -812,7 +818,7 @@ trend.points 是否少于 2 个点
 trend.date 是否匹配记录日期
 ```
 
-缺失时执行 `--refresh-trends`。Yahoo 被阻止时执行 PowerShell 兜底脚本。
+缺失时用 westock `data_minute` 取分时回填，或执行 `--refresh-trends`（HTTP 兜底链）补录。
 
 ### 14.6 页面走势明显错误
 

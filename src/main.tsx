@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
-import type { BenchmarkRecord, DailyRecordFile, EtfRecord, NasdaqTrackingData, TrackingManifest, Trend } from "./types";
+import type { BenchmarkRecord, DailyRecordFile, EtfRecord, NasdaqTrackingData, TrackingManifest } from "./types";
 
 type TabKey = "etfs" | "benchmarks" | "sources";
 
@@ -76,43 +76,6 @@ const groupByDate = <T extends object>(rows: T[], dateKey: keyof T) => {
   }
   return groups;
 };
-
-function TrendSparkline({ trend }: { trend?: Trend | null }) {
-  const points = trend?.points?.filter((point) => Number.isFinite(point.value)) ?? [];
-  if (points.length < 2) {
-    return <span className="trend-empty" title="这条记录生成时还没有保存分钟走势">未记录走势</span>;
-  }
-
-  const width = 132;
-  const height = 42;
-  const padding = 4;
-  const values = points.map((point) => point.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  // 把当天价格压缩到一个小 SVG 里，表格里看走势不占空间。
-  const d = points
-    .map((point, index) => {
-      const x = padding + (index / (points.length - 1)) * (width - padding * 2);
-      const y = height - padding - ((point.value - min) / span) * (height - padding * 2);
-      return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
-  const first = points[0].value;
-  const last = points[points.length - 1].value;
-  const trendClass = last >= first ? "trend-up" : "trend-down";
-  const title = `${trend?.date ?? ""} ${points[0].time} - ${points[points.length - 1].time}`;
-
-  return (
-    <div className="trend-cell" title={title}>
-      <svg viewBox={`0 0 ${width} ${height}`} aria-label={title} role="img">
-        <path className="trend-fill" d={`${d} L${width - padding} ${height - padding} L${padding} ${height - padding} Z`} />
-        <path className={trendClass} d={d} />
-      </svg>
-      <span className="trend-date">{trend?.date}</span>
-    </div>
-  );
-}
 
 function DrawdownItem({ title, code, rows }: { title: string; code: string; rows: Array<[string, string, boolean?]> }) {
   return (
@@ -220,7 +183,6 @@ function EtfTable({ records, visibleGroups, setVisibleGroups }: {
             <th>当天涨幅</th>
             <th>当前净值</th>
             <th>溢价率</th>
-            <th>走势</th>
           </tr>
         </thead>
         <tbody>
@@ -239,12 +201,11 @@ function EtfTable({ records, visibleGroups, setVisibleGroups }: {
                   <td className={signedPctClass(row.daily_change)}>{fmtPct(row.daily_change)}</td>
                   <td className="num">{fmtNumber(row.estimate, 4)}</td>
                   <td className={signedPctClass(row.premium)}>{fmtPct(row.premium)}</td>
-                  <td><TrendSparkline trend={row.trend} /></td>
                 </tr>
               ))
             )
           ) : (
-            <tr className="empty"><td colSpan={8}>暂无记录</td></tr>
+            <tr className="empty"><td colSpan={7}>暂无记录</td></tr>
           )}
         </tbody>
       </table>
@@ -276,7 +237,6 @@ function BenchmarkTable({ records, visibleGroups, setVisibleGroups }: {
             <th>当前点位/价格</th>
             <th>当天涨幅</th>
             <th>跟踪日期</th>
-            <th>走势</th>
           </tr>
         </thead>
         <tbody>
@@ -294,12 +254,11 @@ function BenchmarkTable({ records, visibleGroups, setVisibleGroups }: {
                   <td className="num">{fmtNumber(row.value, 2)}</td>
                   <td className={signedPctClass(row.daily_change)}>{fmtPct(row.daily_change)}</td>
                   <td>{row.track_date}</td>
-                  <td><TrendSparkline trend={row.trend} /></td>
                 </tr>
               ))
             )
           ) : (
-            <tr className="empty"><td colSpan={7}>暂无记录</td></tr>
+            <tr className="empty"><td colSpan={6}>暂无记录</td></tr>
           )}
         </tbody>
       </table>

@@ -914,7 +914,8 @@ def build_etf_rows(config: dict, now: dt.datetime) -> list[dict]:
             premium = price / estimate - 1
         source_ids = ["eastmoney_quote"] if quote_row else ["westock_etf_detail"]
         trade_date = (q_time or now).date()
-        trend = align_etf_trend_close(parse_etf_trend(config, code, trade_date), price)
+        # 走势图已下线（2026-09-08）：不再抓取分时数据
+        trend = None
 
         rows.append(
             {
@@ -979,7 +980,8 @@ def build_backfill_etf_rows(
             raise RuntimeError(f"{code} has no valuation")
 
         price = quote_row["close"]
-        trend = align_etf_trend_close(parse_etf_trend(config, code, trade_date), price)
+        # 走势图已下线（2026-09-08）：回填不再抓取分时数据
+        trend = None
         rows.append(
             {
                 "trade_date": trade_date,
@@ -1032,10 +1034,8 @@ def build_benchmark_row(
     include_trend: bool = True,
 ) -> dict:
     quote_row = parse_benchmark_history(config, item, target_date)
+    # 走势图已下线（2026-09-08）：不再抓取分时；重写同一 quote 时沿用其既有 trend（若日期匹配），避免覆盖丢失
     trend = existing_trend if trend_matches_date(existing_trend, quote_row["quote_date"]) else None
-    if include_trend and not trend:
-        trend = parse_benchmark_trend(config, item, quote_row["quote_date"])
-    trend = align_benchmark_trend_close(trend, quote_row.get("value"))
     return {
         "track_date": track_date,
         "recorded_at": now.strftime("%Y-%m-%d %H:%M:%S"),
@@ -1483,37 +1483,8 @@ def refresh_missing_trends(
     etf_records: list[dict],
     benchmark_records: list[dict],
 ) -> tuple[int, int]:
-    etf_changed = 0
-    for row in etf_records:
-        points = (row.get("trend") or {}).get("points") or []
-        if row.get("trend") and len(points) <= MAX_TREND_POINTS:
-            continue
-        trend = parse_etf_trend(
-            config,
-            row["code"],
-            dt.date.fromisoformat(row["trade_date"]),
-        )
-        trend = align_etf_trend_close(trend, row.get("price"))
-        if trend:
-            row["trend"] = trend
-            etf_changed += 1
-
-    benchmark_config = {item["symbol"]: item for item in config.get("benchmarks", [])}
-    benchmark_changed = 0
-    for row in benchmark_records:
-        points = (row.get("trend") or {}).get("points") or []
-        if row.get("trend") and len(points) <= MAX_TREND_POINTS:
-            continue
-        item = benchmark_config.get(row.get("symbol"))
-        if not item:
-            continue
-        trend = parse_benchmark_trend(config, item, dt.date.fromisoformat(row["quote_date"]))
-        trend = align_benchmark_trend_close(trend, row.get("value"))
-        if trend:
-            row["trend"] = trend
-            benchmark_changed += 1
-
-    return etf_changed, benchmark_changed
+    # 走势图已下线（2026-09-08）：不再获取/补回分时数据。历史记录中已有的 trend 原样保留，不做任何抓取。
+    return 0, 0
 
 
 def main() -> int:
@@ -1558,13 +1529,8 @@ def main() -> int:
         return 0
 
     if args.refresh_trends:
-        etf_records, benchmark_records = read_records(data_path)
-        etf_changed, benchmark_changed = refresh_missing_trends(config, etf_records, benchmark_records)
-        write_page_and_data(path, data_path, config, etf_records, benchmark_records)
-        print(
-            f"refreshed {etf_changed} ETF trend rows and {benchmark_changed} benchmark trend rows "
-            f"to {path} and {data_path}"
-        )
+        # 走势图已下线（2026-09-08）：不再提供分时回补，保留参数仅为兼容旧调用
+        print("deprecated: trend acquisition disabled since 2026-09-08; nothing to refresh")
         return 0
 
     if args.backfill_benchmark_date:
