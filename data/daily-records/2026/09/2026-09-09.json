@@ -44,5 +44,40 @@
       "trend": null
     }
   ],
-  "benchmark_records": []
+  "benchmark_records": [
+    {
+      "track_date": "2026-09-10",
+      "recorded_at": "2026-09-10 15:31:14",
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "value": 716.31,
+      "daily_change": -0.0028537223676151635,
+      "history_high": 732.07,
+      "drawdown": -0.021527995956670987,
+      "history_high_date": "2026-08-13",
+      "quote_date": "2026-09-09",
+      "unit": "USD",
+      "source_ids": [
+        "nasdaq_api_historical"
+      ],
+      "trend": null
+    },
+    {
+      "track_date": "2026-09-10",
+      "recorded_at": "2026-09-10 15:31:14",
+      "symbol": "NDX",
+      "name": "Nasdaq 100 Index",
+      "value": 29421.55,
+      "daily_change": -0.0029195769239893643,
+      "history_high": 30084.5,
+      "drawdown": -0.02203626452159757,
+      "history_high_date": "2026-08-13",
+      "quote_date": "2026-09-09",
+      "unit": "points",
+      "source_ids": [
+        "nasdaq_api_historical"
+      ],
+      "trend": null
+    }
+  ]
 }
