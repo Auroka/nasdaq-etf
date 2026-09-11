@@ -1,0 +1,48 @@
+{
+  "date": "2026-09-11",
+  "etf_records": [
+    {
+      "trade_date": "2026-09-11",
+      "recorded_at": "2026-09-11 15:30:47",
+      "code": "513100",
+      "name": "国泰纳指100",
+      "price": 2.201,
+      "daily_change": -0.008100000000000001,
+      "estimate": 1.9657,
+      "premium": 0.1197,
+      "source_ids": [
+        "westock_etf_detail"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-09-11",
+      "recorded_at": "2026-09-11 15:30:47",
+      "code": "159501",
+      "name": "嘉实纳指100",
+      "price": 2.092,
+      "daily_change": -0.0033,
+      "estimate": 1.8464,
+      "premium": 0.133,
+      "source_ids": [
+        "westock_etf_detail"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-09-11",
+      "recorded_at": "2026-09-11 15:30:47",
+      "code": "159659",
+      "name": "招商纳指100",
+      "price": 2.332,
+      "daily_change": -0.0055000000000000005,
+      "estimate": 2.1235,
+      "premium": 0.09820000000000001,
+      "source_ids": [
+        "westock_etf_detail"
+      ],
+      "trend": null
+    }
+  ],
+  "benchmark_records": []
+}
