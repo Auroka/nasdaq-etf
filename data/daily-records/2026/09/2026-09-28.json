@@ -1,0 +1,86 @@
+{
+  "date": "2026-09-28",
+  "etf_records": [
+    {
+      "trade_date": "2026-09-28",
+      "recorded_at": "2026-10-09 10:29:17",
+      "code": "513100",
+      "name": "纳指ETF国泰",
+      "price": 2.304,
+      "daily_change": -0.0034602076124568004,
+      "estimate": 2.0498,
+      "premium": 0.12401209874134067,
+      "source_ids": [
+        "sina_daily_kline",
+        "eastmoney_fund_nav"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-09-28",
+      "recorded_at": "2026-10-09 10:29:17",
+      "code": "159501",
+      "name": "纳指ETF嘉实",
+      "price": 2.214,
+      "daily_change": 0.0009,
+      "estimate": 1.9257,
+      "premium": 0.14971179311419225,
+      "source_ids": [
+        "eastmoney_kline",
+        "eastmoney_fund_nav"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-09-28",
+      "recorded_at": "2026-10-09 10:29:17",
+      "code": "159659",
+      "name": "纳斯达克100ETF招商",
+      "price": 2.412,
+      "daily_change": -0.0045000000000000005,
+      "estimate": 2.2156,
+      "premium": 0.0886441595955949,
+      "source_ids": [
+        "eastmoney_kline",
+        "eastmoney_fund_nav"
+      ],
+      "trend": null
+    }
+  ],
+  "benchmark_records": [
+    {
+      "track_date": "2026-09-29",
+      "recorded_at": "2026-10-09 10:22:23",
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "value": 736.53,
+      "daily_change": -0.010705171255876444,
+      "history_high": 747.46,
+      "drawdown": -0.01462285607256586,
+      "history_high_date": "2026-09-22",
+      "quote_date": "2026-09-28",
+      "unit": "USD",
+      "source_ids": [
+        "nasdaq_api_historical"
+      ],
+      "trend": null
+    },
+    {
+      "track_date": "2026-09-29",
+      "recorded_at": "2026-10-09 10:22:23",
+      "symbol": "NDX",
+      "name": "Nasdaq 100 Index",
+      "value": 30276.81,
+      "daily_change": -0.010824575039376838,
+      "history_high": 30732.4,
+      "drawdown": -0.014824419830537172,
+      "history_high_date": "2026-09-22",
+      "quote_date": "2026-09-28",
+      "unit": "points",
+      "source_ids": [
+        "nasdaq_api_historical"
+      ],
+      "trend": null
+    }
+  ]
+}

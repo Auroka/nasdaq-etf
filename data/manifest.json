@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-24 16:36:58",
+  "generated_at": "2026-10-09 10:33:20",
   "etfs": [
     {
       "code": "513100",
@@ -163,6 +163,42 @@
     }
   ],
   "daily_files": [
+    {
+      "date": "2026-10-08",
+      "file": "daily-records/2026/10/2026-10-08.json",
+      "etf_count": 3,
+      "benchmark_count": 0
+    },
+    {
+      "date": "2026-10-07",
+      "file": "daily-records/2026/10/2026-10-07.json",
+      "etf_count": 0,
+      "benchmark_count": 2
+    },
+    {
+      "date": "2026-09-30",
+      "file": "daily-records/2026/09/2026-09-30.json",
+      "etf_count": 3,
+      "benchmark_count": 0
+    },
+    {
+      "date": "2026-09-29",
+      "file": "daily-records/2026/09/2026-09-29.json",
+      "etf_count": 3,
+      "benchmark_count": 2
+    },
+    {
+      "date": "2026-09-28",
+      "file": "daily-records/2026/09/2026-09-28.json",
+      "etf_count": 3,
+      "benchmark_count": 2
+    },
+    {
+      "date": "2026-09-25",
+      "file": "daily-records/2026/09/2026-09-25.json",
+      "etf_count": 0,
+      "benchmark_count": 2
+    },
     {
       "date": "2026-09-24",
       "file": "daily-records/2026/09/2026-09-24.json",
