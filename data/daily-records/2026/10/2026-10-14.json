@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-14",
+  "etf_records": [
+    {
+      "trade_date": "2026-10-14",
+      "recorded_at": "2026-10-15 14:11:24",
+      "code": "513100",
+      "name": "纳指ETF国泰",
+      "price": 2.399,
+      "daily_change": 0.0101,
+      "estimate": 2.0494,
+      "premium": 0.1705865131257931,
+      "source_ids": [
+        "eastmoney_kline",
+        "tinyright_iopv"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-10-14",
+      "recorded_at": "2026-10-15 14:11:24",
+      "code": "159501",
+      "name": "纳指ETF嘉实",
+      "price": 2.229,
+      "daily_change": 0.0036,
+      "estimate": 1.9252,
+      "premium": 0.1578017868273427,
+      "source_ids": [
+        "eastmoney_kline",
+        "tinyright_iopv"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-10-14",
+      "recorded_at": "2026-10-15 14:11:24",
+      "code": "159659",
+      "name": "纳斯达克100ETF招商",
+      "price": 2.517,
+      "daily_change": 0.0044,
+      "estimate": 2.215,
+      "premium": 0.13634311512415342,
+      "source_ids": [
+        "eastmoney_kline",
+        "tinyright_iopv"
+      ],
+      "trend": null
+    }
+  ],
+  "benchmark_records": []
+}
