@@ -21,7 +21,7 @@
 - 名称
 - 当前价格
 - 当天涨幅
-- 当前净值（替代 T-1 估值，来自腾讯自选股 ETF 详情 `nav` 字段）
+- 当前净值（最近一个中国交易日的官方净值，来自东财基金净值 DWJZ）
 - 溢价率
 - 数据源
 
@@ -54,14 +54,19 @@
 
 ## 数据源配置
 
-所有行情数据一律通过**腾讯自选股连接器（westock MCP）**获取，不再从 HTTP 行情网站抓取。数据源与跟踪标的统一维护在：
+所有行情数据由 `fetch_nasdaq_data.py` 获取，每个关键数值都做双源交叉校验。数据源与跟踪标的统一维护在：
 
 ```text
 data_sources.json
 ```
 
-- 活跃源（唯一取数源）：`westock_quote`（行情/收盘）、`westock_etf_detail`（ETF 净值/估值）、`westock_kline`（历史 K 线）。分时走势（`westock_minute`）自 2026-09-08 起不再采集。
-- 东方财富、新浪财经、腾讯证券、Nasdaq 官方、Yahoo Finance 等 HTTP 源已停用（`retired`），仅保留供历史记录 `source_ids` 引用和页面数据源表展示，不再作为取数通道。
+| 数据 | 主源 | 校验 / 兜底 |
+| --- | --- | --- |
+| ETF 收盘价、日涨幅 | 新浪日 K | 腾讯日 K；不一致时用东财 K 线仲裁 |
+| ETF 净值（estimate） | 东财官方净值（DWJZ） | tinyright IOPV → tinyright T-1 → 纳指涨跌推算 |
+| QQQ / NDX 收盘、涨幅、历史最高 | Nasdaq 官方历史行情 | 新浪美股日 K（NDX 使用 `.NDX`） |
+
+走势图已于 2026-09-08 下线，分时数据源全部停用。腾讯自选股连接器（westock）自 2026-09 起长期不可用，已不再作为取数通道。
 
 页面展示用的记录数据单独维护在：
 
@@ -85,39 +90,37 @@ data/
 
 ## 使用
 
-当天收盘后记录：
+自动补齐所有未记录的交易日（推荐，脚本会判断是否收盘）：
 
 ```powershell
-python record_nasdaq_etf.py
+python fetch_nasdaq_data.py
 ```
 
-补录指定交易日：
+```text
+- 中国交易日 15:00 前执行：不记录当天 ETF，只补 QQQ/NDX 最近一个已收盘美股交易日
+- 中国交易日 15:00 后执行：记录当天 ETF + 最近一个已收盘美股交易日
+- 任意多天缺口（周末、长假、长时间未运行）：一次性补齐
+- 写入前取齐所有目标日并交叉校验，任一失败则整体不写
+- 写入后按中国/美国交易日历审计，缺一天即报失败
+```
+
+其他命令：
 
 ```powershell
-python record_nasdaq_etf.py --backfill-date 2026-06-01
+python fetch_nasdaq_data.py --dry-run             # 预览，不写文件
+python fetch_nasdaq_data.py --check               # 本地体检，不发网络请求
+python fetch_nasdaq_data.py --date 2026-10-15     # 强制重录某个中国交易日
+python fetch_nasdaq_data.py --since 2026-09-01    # 限定审计/补全起点
+python fetch_nasdaq_data.py --json                # 机器可读结果
 ```
 
-ETF 价格、涨幅、历史 K 线优先使用腾讯自选股连接器（westock），溢价率通过 `estimate`/净值按 `price / estimate - 1` 计算。不再主动访问东方财富、新浪等 HTTP 行情站（仅作最后兜底）。
+溢价率计算方式：
 
-刷新并补齐已记录 ETF 交易日对应的 QQQ/NDX 回撤口径：
-
-```powershell
-python record_nasdaq_etf.py --refresh-benchmarks
+```text
+溢价率 = 收盘价 / 当前净值 - 1
 ```
 
-只补某个美股行情日的 QQQ/NDX：
-
-```powershell
-python record_nasdaq_etf.py --backfill-benchmark-date 2026-06-12
-```
-
-补已记录数据中的分钟走势功能已随走势图下线（2026-09-08）停用：
-
-```powershell
-python record_nasdaq_etf.py --refresh-trends
-```
-
-> 该命令现为 no-op（仅保留参数兼容），不再抓取任何分时/分钟数据。历史记录中已有的 `trend` 原样保留，不做清理。
+`record_nasdaq_etf.py` 为历史脚本（存在节后首日估值失败等问题），日常不再使用。
 
 输出文件：
 

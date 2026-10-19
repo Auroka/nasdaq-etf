@@ -2,7 +2,17 @@
 
 本文面向接手维护本项目的 Agent 或开发者。目标是让接手者不依赖历史对话，也能理解项目用途、数据口径、运行方式、更新流程和常见故障。
 
-> **2026-09-08 变更：走势图已下线。** 页面不再展示分时走势列，采集/回填流程不再抓取任何分时分钟数据（`data_minute`/`westock_minute`/HTTP 分钟源一律不用）。历史每日 JSON 中已存的 `trend` 字段原样保留、不再使用；新写入记录 `trend` 为 `null`。`--refresh-trends` 已弃用为 no-op。下文所有「分钟走势/分时/走势图」相关章节均为历史遗留说明，不再作为操作依据。
+> **2026-09-08 变更：走势图已下线。** 页面不再展示分时走势，采集/回填流程也不抓取任何分钟数据。历史每日 JSON 中已存的 `trend` 字段原样保留、不再使用；新写入记录 `trend` 为 `null`。原「分钟走势补录与修复」章节已随功能下线删除，`--refresh-trends` 为 no-op。
+
+> **2026-10-19 变更：取数链路改为 HTTP 多源交叉校验，`fetch_nasdaq_data.py` 成为唯一入口。**
+> 腾讯自选股连接器（westock MCP）自 2026-09 起长期不可用，继续依赖它会导致每日都需人工兜底。新脚本：
+> - 自动判断 A 股是否收盘（15:00 前不记当天 ETF，只补 QQQ/NDX），自动补齐**所有**缺失交易日（含长假）；
+> - ETF 收盘：新浪日 K（主）+ 腾讯日 K（校验）+ 东财 K 线（仲裁）；ETF 净值：东财官方 DWJZ（主）→ tinyright IOPV → tinyright T-1 / 指数推算；
+> - QQQ/NDX：Nasdaq 官方（主）+ 新浪美股日 K（校验，NDX 用 `.NDX`），历史最高用全历史收盘序列；
+> - 写入前取齐所有目标日，任一失败整体不写；写入后按中国/美国交易日历审计，缺一天即失败。
+>
+> `record_nasdaq_etf.py` 降级为历史脚本（仍被新脚本复用读写函数）。项目 skill：`.workbuddy/skills/nasdaq-data-completion/SKILL.md`。
+> §11.2 的历史脚本命令仅供追溯，日常请以本段与 `CLAUDE.md` 为准。
 
 ## 1. 项目概览
 
@@ -39,14 +49,13 @@
 - 历史最高收盘价或收盘点位
 - 距历史最高收盘的回撤
 - 历史最高收盘日期
-- 美股常规交易时段走势
 - 实际使用的数据源
 
 ### 1.2 项目不做什么
 
 - 不提供实时交易信号。
 - 不使用盘中最高价计算 QQQ/NDX 历史最高点；历史最高收盘由项目已有记录自行维护：每次写入新记录时，将当前收盘值与已有 `history_high` 比较取较大值。
-- 不依赖外部估值服务（如 tinyright）。ETF 溢价率按当前价格除以腾讯自选股 ETF 详情返回的 `nav` 净值计算。
+- 溢价率一律按 `price / estimate - 1` 自行计算，不使用交易所或行情站直接返回的溢折价率。`estimate` 以官方净值为准，缺失时才用镜像或指数推算，并在 `source_ids` 标注来源。
 - 不把 `node_modules` 部署到 GitHub Pages。
 - 不依赖数据库，正式数据由按日期拆分的 JSON 文件保存。
 - 不内置完整的中国和美国交易所节假日日历。
@@ -124,8 +133,6 @@ nasdaq-etf/
     HANDOFF.md                      本交接文档
   scripts/
     build.mjs                       React/TypeScript 构建脚本
-    refresh_yahoo_intraday_trends.ps1
-                                     Yahoo 分钟数据 PowerShell 兜底
   src/
     main.tsx                        页面组件、数据加载、表格和折线图
     styles.css                      页面样式
@@ -134,18 +141,21 @@ nasdaq-etf/
   .nojekyll                         禁止 GitHub Pages 使用 Jekyll 处理
   CLAUDE.md                         Agent 项目规则
   data_sources.json                 跟踪标的和数据源配置
+  fetch_nasdaq_data.py              当前唯一取数入口（自动补齐 + 交叉校验 + 写后审计）
   index.html                        React 页面壳，生成文件
   package-lock.json                 Node 依赖锁文件
   package.json                      Node 脚本和依赖
   README.md                         项目简介和常用命令
-  record_nasdaq_etf.py              数据采集、补录和写入主程序
+  record_nasdaq_etf.py              历史采集脚本（仅参考，日常不再调用）
   tsconfig.json                     TypeScript 配置
+  .workbuddy/skills/nasdaq-data-completion/SKILL.md
+                                    项目级 skill：记录/补全纳指数据时优先使用
 ```
 
 维护边界：
 
 - 调整标的或接口：修改 `data_sources.json`。
-- 调整采集、回填、口径或写入：修改 `record_nasdaq_etf.py`。
+- 调整采集、回填、口径或写入：修改 `fetch_nasdaq_data.py`（它复用 `record_nasdaq_etf.py` 的 `read_records` / `write_rows` 负责读写与页面重建）。
 - 调整页面：修改 `src/`，然后重新构建 `assets/`。
 - 不手工修改 `assets/app.js`、`assets/app.css`。
 - 不把业务逻辑写进 `index.html`；它是生成的页面壳。
@@ -202,26 +212,6 @@ data/daily-records/2026/07/2026-07-02.json
 ```
 
 所以 `2026-07-03.json` 中 `benchmark_records` 为空，不表示 `2026-07-03` 的跟踪任务漏记。
-
-### 4.4 分钟走势
-
-每条走势最多保留 `64` 个点，目的是控制每日 JSON 大小，同时保留走势形状。
-
-ETF：
-
-- 走势日期必须等于 `trade_date`。
-- 收盘点统一为 `15:00`。
-- 最终点数值必须与 ETF 表格的 `price` 一致。
-- 新浪分钟数据只有覆盖 `09:35` 至 `15:00` 才会被接受。
-
-QQQ/NDX：
-
-- 走势日期必须等于 `quote_date`。
-- Nasdaq 数据只保留美东时间 `9:30 AM` 至 `4:00 PM` 的常规交易时段。
-- 最终点统一为 `4:00 PM`。
-- 最终点数值必须与表格的 `value` 一致。
-
-代码会强制将最终点对齐到表格收盘值。维护者仍应检查走势日期、时间范围和大体形状，因为“最终点一致”不代表整段走势一定来自正确交易日。
 
 ## 5. 数据文件结构
 
@@ -281,10 +271,10 @@ ETF 行关键字段：
 | `name` | ETF 名称 |
 | `price` | 收盘价格 |
 | `daily_change` | 当天涨幅，小数比例 |
-| `estimate` | 当前净值（来自腾讯自选股 ETF 详情 `nav` 字段，与原来的 T-1 IOPV 数值一致） |
+| `estimate` | 目标日前一中国交易日的官方净值（缺失时镜像/推算并标注） |
 | `premium` | 溢价率，小数比例 |
 | `source_ids` | 本行数据源 ID 列表 |
-| `trend` | 分钟走势；无可用走势时为 `null` |
+| `trend` | 历史遗留字段（走势已下线），新记录恒为 `null` |
 
 QQQ/NDX 行关键字段：
 
@@ -301,7 +291,7 @@ QQQ/NDX 行关键字段：
 | `quote_date` | 实际美股行情日期，也是基准记录归档日期 |
 | `unit` | `USD` 或 `points` |
 | `source_ids` | 本行数据源 ID 列表 |
-| `trend` | 常规交易时段走势；无可用走势时为 `null` |
+| `trend` | 历史遗留字段（走势已下线），新记录恒为 `null` |
 
 ### 5.3 去重键
 
@@ -314,30 +304,35 @@ QQQ/NDX：quote_date + symbol
 
 重复运行同一日期不会产生重复行。注意 QQQ/NDX 的覆盖键不包含 `track_date`，同一 `quote_date + symbol` 只能保留一条记录。
 
-## 6. 数据源（唯一取数源：westock MCP）
+## 6. 数据源（2026-10-19 起：HTTP 多源交叉校验）
 
 完整接口地址和标的配置以 `data_sources.json` 为唯一准确信息。
 
-> **2026-09-03 用户强制约定（最高优先）**：所有行情数据一律通过腾讯自选股连接器（westock MCP）获取，不再从 HTTP 行情网站抓取。下方 westock 工具已实测覆盖本项目全部需求（ETF 三只 + QQQ/NDX 的收盘价、涨幅、估值、分时、历史最高）。`data_sources.json` 中 eastmoney/sina/tencent/yahoo/nasdaq 等 HTTP 源已标记 `retired`，仅保留供历史记录 `source_ids` 引用，不作为取数通道。
+> **现状（2026-10-19）**：腾讯自选股连接器自 2026-09 起长期不可用，日常取数改由 `fetch_nasdaq_data.py` 完成。该脚本对每个关键数值至少做双源校验；不一致且无法仲裁时整体终止，不写入任何数据。
 
-### 6.0 westock 工具对照表
+### 6.0 取数链路对照表
 
-| 需求 | westock 工具 | 代码 |
+| 需求 | 主源 | 校验 / 兜底 |
 | --- | --- | --- |
-| 实时/历史日快照（收盘、涨幅） | `data_quote`（支持 `date=YYYY-MM-DD`） | `sh513100` / `sz159501` / `sz159659` / `usQQQ.OQ` / `usNDX` |
-| ETF 估值/净值（estimate） | `data_etf`（nav 字段） | `sh513100` 等 |
-| 历史日 K（回填、history_high/回撤） | `data_kline`（period=day, start/end） | 同上 |
-| 分时走势 | `data_minute`（days=N，覆盖近 N 交易日完整分时） | 同上 |
-| 代码/名称搜索 | `data_search` | — |
+| ETF 收盘价、日涨幅 | 新浪日 K `quotes.sina.cn`（`datalen` 支持 400 条） | 腾讯日 K `web.ifzq.gtimg.cn`；不一致时东财 K 线仲裁 |
+| ETF 净值（estimate） | 东财基金净值 `api.fund.eastmoney.com/f10/lsjz`（DWJZ，20 条/页） | tinyright `iopvData` → tinyright `t1Data` → 官方净值×纳指涨跌推算 |
+| QQQ/NDX 收盘、涨幅 | Nasdaq 官方 `api.nasdaq.com/api/quote/{symbol}/historical` | 新浪美股日 K（QQQ / `.NDX`） |
+| QQQ/NDX 历史最高 | 上述两源的全历史收盘序列，取截至目标日最大值 | — |
 
-QQQ 用 `usQQQ.OQ`，NDX 用 `usNDX`（勿用裸 NDX）。
+关键坑位：
+
+- `api.nasdaq.com` 必须带 `fromdate`，否则返回 `rCode 400`；`NDX` 必须用 `assetclass=index`（用 `etf` 会报 `Symbol not exists.`）。
+- 东财 `push2his` 的 HTTPS 在部分网络下会被直接断连，改用 HTTP 可恢复；脚本已内置 HTTP 降级。
+- 新浪美股 NDX 只能使用 `.NDX`，`^NDX` / `NDX` 都返回 `null`。
+- 东财净值接口 `pageSize` 最大只返回 20 条，必须按页翻。
+- 收盘后新浪日 K 可能滞后几分钟；此时当天收盘价由腾讯日 K 提供（腾讯日 K 盘中即包含当天 bar）。
 
 ### 6.1 当日 ETF 表格数据
 
 | 数据 | 取数源 |
 | --- | --- |
-| 价格、涨幅 | `westock_quote`（`data_quote`，腾讯自选股） |
-| 净值（estimate） | `westock_etf_detail`（`data_etf` 的 `nav` 字段） |
+| 价格、涨幅 | 新浪日 K（主）+ 腾讯日 K（校验/补当天），东财 K 线仲裁 |
+| 净值（estimate） | 东财官方净值 `DWJZ`，取 D 的前一个中国交易日 |
 
 溢价率直接按 `price / estimate - 1` 计算，不依赖外部估值服务或接口返回的溢折价率。
 
@@ -345,34 +340,16 @@ QQQ 用 `usQQQ.OQ`，NDX 用 `usNDX`（勿用裸 NDX）。
 
 | 数据 | 取数源 |
 | --- | --- |
-| 历史收盘和涨幅 | `data_kline` / `data_quote`(date=)，腾讯自选股 |
-| 净值（estimate） | `data_etf`，记录写入时刻的最新可用净值 |
+| 历史收盘和涨幅 | 新浪日 K / 腾讯日 K，东财 K 线仲裁 |
+| 净值（estimate） | 东财官方净值（按日查询），未公布时用 tinyright IOPV 或指数推算 |
 
-净值与 T-1 IOPV 数值一致，历史补录时使用写入时刻 westock 返回的最新净值。不再需要历史净值日期精确匹配。
-
-### 6.3 ETF 分钟走势
+### 6.3 QQQ/NDX 日线与回撤
 
 ```text
-westock_minute (data_minute，腾讯自选股分时，唯一取数源)
+nasdaq_api_historical (api.nasdaq.com) + sina_us_daily (新浪美股日 K)
 ```
 
-`data_minute` 的 `days=3` 返回近 3 个交易日完整分时（含目标日）。早盘 9:30-10:30 缺失 = 高溢价临时停牌（10:30 复牌，首 bar ≈10:35），不算缺口、不补。
-
-### 6.4 QQQ/NDX 日线与回撤
-
-```text
-westock_quote / westock_kline (data_quote / data_kline，腾讯自选股)
-```
-
-历史最高收盘由项目已有记录自行维护：每次记录时与已有 `history_high` 比较取较大值。初次建立或怀疑遗漏时，用 `data_kline` 获取足量历史 K 线遍历 `last` 字段得出。
-
-### 6.5 QQQ/NDX 分钟走势
-
-```text
-westock_minute (data_minute，腾讯自选股分时，唯一取数源)
-```
-
-`data_minute` 返回美股常规交易时段（9:30 AM - 4:00 PM）的分钟数据，最终点与正式收盘值对齐。
+历史最高收盘取两源全历史序列截至目标日的最大值；同时与项目已有 `history_high` 比较取较大值。
 
 ## 7. 首次接手与本地启动
 
@@ -423,7 +400,7 @@ http://127.0.0.1:5173/
 
 ## 8. 每日数据更新标准流程
 
-推荐在中国交易日北京时间 `15:30` 后执行。脚本的硬性时间检查是 `15:00`，但 `15:30` 更容易拿到完整分钟走势。
+推荐在中国交易日北京时间 `15:30` 后执行。脚本的硬性时间检查是 `15:00`，但 `15:30` 后新浪日 K 与基金净值接口通常已更新，成功率和数据质量更稳定。
 
 ### 8.1 执行前
 
@@ -437,23 +414,26 @@ git pull --ff-only origin main
 
 ### 8.2 采集当天数据
 
-取数主路径（会话/自动化执行）：用腾讯自选股连接器（westock MCP）的 `data_quote`（3 只 ETF + QQQ/NDX）、`data_etf`（估值）、`data_kline`（历史高/日 K）、`data_minute`（分时）取数，校验后写入每日 JSON 并重建页面。
-
-脚本兜底（仅无 westock 会话时）：
-
 ```powershell
-python record_nasdaq_etf.py
+python fetch_nasdaq_data.py
 ```
+
+脚本会自动完成：
+
+1. 判断 A 股是否已收盘（15:00）。未收盘则不记当天 ETF，只补最近一个已收盘的美股交易日。
+2. 按中国/美国交易日历计算所有缺失交易日（不限天数）。
+3. 取数并交叉校验（详见 §6）。
+4. 全部成功后一次性写入，再按日历审计完整性。
 
 输出含义：
 
-- `recorded ...`：数据已写入或覆盖，可以进入验证。
-- `skipped: market has not closed yet`：执行时间早于 `15:00`。
-- `skipped: ... quote date is ..., not ...`：ETF 行情日期不是当前日期，通常是休市、接口延迟或错误行情。
-- `skipped: today is not a weekday`：周六或周日。
-- `failed: ...`：接口、字段、估值日期或网络请求失败，不能提交不完整数据。
+- `[计划]` 行：本次要补的 ETF 日期与基准 quote_date。
+- `[写入] ETF N 行 / 基准 M 行`：实际写入行数。
+- `[审计] ... 缺失 0 天` + `[结果] 数据完整 ✓`：完整性通过。
+- `[结果] 没有需要补的数据`：已是最新，未写入。
+- `failed: ...`：取数或校验失败，**不会写入任何数据**。
 
-不要使用 `--force` 绕过日期检查来完成普通日常记录。`--force` 只适合已经人工确认所有行情日期和数据内容的恢复场景。
+查看结果可用 `--json` 获取机器可读结构。不要手工修改每日 JSON 来"补齐"缺口。
 
 ### 8.3 检查改动
 
@@ -476,12 +456,10 @@ Get-Content -Raw -Encoding utf8 (Join-Path .\data $latest.file)
 
 - 当前中国交易日有且只有 `3` 条 ETF。
 - ETF 代码为 `513100`、`159501`、`159659`。
-- `trade_date` 与走势日期一致。
+- ETF 行的 `trade_date` 等于目标中国交易日。
 - `premium` 满足 `price / estimate - 1`。
 - QQQ/NDX 各有一条记录，并且 `quote_date` 是最近有效美股收盘日。
 - `history_high` 和 `drawdown` 使用收盘价口径，且 `history_high` 不小于当前 `value`。
-- ETF 最后一个走势点为 `15:00` 且等于 `price`。
-- QQQ/NDX 最后一个走势点为 `4:00 PM` 且等于 `value`。
 - `source_ids` 与实际来源相符。
 
 ### 8.4 校验 JSON、Python 和前端
@@ -491,7 +469,7 @@ Get-Content -Raw -Encoding utf8 .\data\manifest.json | ConvertFrom-Json | Out-Nu
 Get-ChildItem .\data\daily-records -Recurse -Filter *.json | ForEach-Object {
   Get-Content -Raw -Encoding utf8 $_.FullName | ConvertFrom-Json | Out-Null
 }
-python -m py_compile record_nasdaq_etf.py
+python -m py_compile fetch_nasdaq_data.py record_nasdaq_etf.py
 npm run typecheck
 npm run build
 ```
@@ -520,64 +498,41 @@ git push origin main
 
 ### 9.1 先识别缺口
 
-`data/manifest.json` 只能说明已经记录了哪些日期，不能判断某个工作日是否为交易所休市日。补录前应结合交易所日历或可靠行情源确认真实交易日。
-
-快速列出已有日期：
+`fetch_nasdaq_data.py` 会自动按市场日历识别缺口，无需手工列出日期。只想知道缺什么而不写入时：
 
 ```powershell
-$manifest = Get-Content -Raw -Encoding utf8 .\data\manifest.json | ConvertFrom-Json
-$manifest.daily_files | Sort-Object date | Select-Object date, etf_count, benchmark_count
+python fetch_nasdaq_data.py --dry-run
 ```
+
+它与真实运行的差别只是不写文件，`[计划]` 行会列出所有待补日期。
 
 注意：
 
-- `benchmark_count = 0` 不一定是缺口，QQQ/NDX 可能按前一个 `quote_date` 存在另一文件中。
-- 判断 QQQ/NDX 是否漏记，应检查所有 `benchmark_records` 的 `track_date` 和 `quote_date`，不能只看文件名。
-- 脚本不自动补齐一个日期区间，每个确认后的交易日需要单独执行。
+- `benchmark_count = 0` 不一定是缺口，QQQ/NDX 按 `quote_date` 归档在另一文件中。
+- 判断 QQQ/NDX 是否漏记，应看所有记录的 `quote_date`，不能只看文件名。
+- 中国长假期间的美股交易日也会被补齐（`track_date` 取其后第一个中国交易日）。
 
 ### 9.2 同时补 ETF 和 QQQ/NDX
 
 ```powershell
-python record_nasdaq_etf.py --backfill-date 2026-06-01
+python fetch_nasdaq_data.py                  # 自动补齐全部缺口
+python fetch_nasdaq_data.py --date 2026-06-01  # 只重录指定的中国交易日
+python fetch_nasdaq_data.py --since 2026-09-01 # 限定审计/补全起点
 ```
 
-该命令会：
+`--date` 会覆盖该日已有记录，只在确认原记录有误时使用。补录完成后脚本会自动重建 `manifest.json` 与 `index.html`。
 
-1. 获取指定中国交易日的三只 ETF 历史收盘和涨幅。
-2. 获取写入时刻腾讯自选股 ETF 详情的最新净值作为估值。
-3. 计算 ETF 溢价率 = `price / estimate - 1`。
-4. 查找该跟踪日对应的最近有效美股行情。
-5. 获取对应的 QQQ/NDX 收盘价、计算涨幅、更新历史最高收盘和回撤。
-6. 生成或更新 ETF 和 QQQ/NDX 记录。
-7. 尝试补分钟走势。
+> 回填语义：`estimate(D)` 取 D 的前一个中国交易日的官方净值；基准 `quote_date` 取 ≤(D-1) 的最近美股交易日。节后首日的 `quote_date` 可能落在没有 ETF 交易的中国节假日，从而自然产生只有 benchmark 的文件，属正常现象（旧脚本在此场景会抛 `valuation date mismatch`，新脚本已修复）。
 
-> 取数优先级（2026-09-03 用户强制约定）：**优先在会话中用腾讯自选股连接器（westock MCP：`data_quote`/`data_kline`/`data_minute`/`data_etf`）取数后回填**；`--backfill-date` 的脚本 HTTP 链仅在无 westock 会话或 westock 不可用时兜底。回填后必须用 `write_page_and_data` 重建 `index.html` + `manifest.json`（`read_records` 需传 `manifest.json` 路径）。
+### 9.3 只重建某个美股行情日
 
-建议先预览：
+新脚本不提供“只补基准”的入口，基准按 `quote_date` 与该日之后的第一个中国交易日绑定。需要重建某个美股行情日时：
 
 ```powershell
-python record_nasdaq_etf.py --backfill-date 2026-06-01 --dry-run
+python fetch_nasdaq_data.py --date 2026-06-15   # 该行情日之后的第一个中国交易日
 ```
 
-`--dry-run` 会发起真实网络请求并打印结果，但不写入文件。
-
-### 9.3 只补 QQQ/NDX 某个行情日
-
-```powershell
-python record_nasdaq_etf.py --backfill-benchmark-date 2026-06-12
-```
-
-默认 `track_date` 是该行情日后的下一个周一至周五日期。需要明确指定时：
-
-```powershell
-python record_nasdaq_etf.py --backfill-benchmark-date 2026-06-12 --track-date 2026-06-15
-```
-
-该命令只写日线、历史最高收盘和回撤，不主动获取分钟走势；随后执行：
-
-```powershell
-python record_nasdaq_etf.py --refresh-trends
-```
+`--date` 会同时重算该中国交易日的 ETF 与该行情日的 QQQ/NDX，不影响其他日期。
 
 ### 9.4 批量补录原则
 
@@ -593,70 +548,21 @@ foreach ($date in $dates) {
 
 日期列表必须来自已经确认的实际中国交易日，不要直接把所有周一至周五当作交易日。
 
-## 10. 分钟走势补录与修复
-
-### 10.1 补缺失走势
-
-补分时优先用腾讯自选股连接器 `data_minute`（`days=3` 返回近 3 个交易日完整分时，含目标日复牌后段），在会话中取数后回填对应每日 JSON 的 `trend`，再重建页面；**不要先逐站重试 HTTP**。
-
-脚本兜底命令（HTTP 链，仅无 westock 时使用）：
-
-```powershell
-python record_nasdaq_etf.py --refresh-trends
-```
-
-该命令主要补 `trend` 为空的记录，并尝试重新获取超过 `64` 点的旧走势。重新获取成功的走势最多保留 `64` 点；请求失败时保留原记录。已有且不超过 `64` 点的走势会被保留，即使它的形状有问题也不会自动替换。
-
-### 10.2 Yahoo PowerShell 兜底（已停用）
-
-> 2026-09-03 起 Yahoo 分钟兜底停用，分时一律走腾讯自选股 `data_minute`。以下脚本仅作为历史遗留说明保留，不作为常规取数手段。
-
-```powershell
-& .\scripts\refresh_yahoo_intraday_trends.ps1
-```
-
-该脚本同样只补缺失走势，不替换已经存在的走势。
-
-### 10.3 修复“已有但错误”的走势
-
-不要只看折线图是否有线。按以下顺序处理：
-
-1. 找到目标 `quote_date` 或 `trade_date` 对应的每日 JSON。
-2. 核对 `trend.date`、第一点、最后一点和 `source_ids`。
-3. 先尝试重新运行对应日期的 `--backfill-date`（或其 westock 等价取数流程）。
-4. 如果错误走势仍被保留，将目标行的 `trend` 设为 `null`，保持其他字段不变。
-5. 用腾讯自选股连接器 `data_minute` 取该日分时回填，或运行 `python record_nasdaq_etf.py --refresh-trends` 兜底。
-6. 再次核对完整时间范围和最终收盘点。
-7. 只提交目标每日文件及随之更新的 `manifest.json`、`index.html`。
-
-QQQ/NDX 也可以先执行：
-
-```powershell
-python record_nasdaq_etf.py --backfill-benchmark-date YYYY-MM-DD --track-date YYYY-MM-DD
-python record_nasdaq_etf.py --refresh-trends
-```
-
-第一条命令会重建该行情日的基准行并让走势进入待补状态，第二条命令重新获取走势。
-
-### 10.4 走势验收标准
-
-ETF：
-
-- `trend.date == trade_date`
-- 点位按时间递增
-- 包含上午和下午交易时段
-- 最终时间为 `15:00`
-- 最终值等于 `price`
-
-QQQ/NDX：
-
-- `trend.date == quote_date`
-- 只保留常规交易时段
-- 点位按时间递增
-- 最终时间为 `4:00 PM`
-- 最终值等于 `value`
-
 ## 11. 命令参考
+
+### 11.1 当前入口（2026-10-19 起）
+
+| 命令 | 用途 | 是否写文件 |
+| --- | --- | --- |
+| `python fetch_nasdaq_data.py` | 自动补齐所有缺失交易日（判断收盘、取数校验、写后审计） | 是 |
+| `python fetch_nasdaq_data.py --dry-run` | 只取数校验并预览，不写文件 | 否 |
+| `python fetch_nasdaq_data.py --check` | 本地数据体检，不发网络请求 | 否 |
+| `python fetch_nasdaq_data.py --date YYYY-MM-DD` | 强制重录某个中国交易日（覆盖该日） | 是 |
+| `python fetch_nasdaq_data.py --since YYYY-MM-DD` | 限定审计/补全起点 | 取决于其他参数 |
+| `python fetch_nasdaq_data.py --json` | 输出机器可读结果（进度走 stderr） | 取决于其他参数 |
+| `python fetch_nasdaq_data.py --now "YYYY-MM-DD HH:MM"` | 模拟运行时间（测试场景） | 取决于其他参数 |
+
+### 11.2 历史脚本（仅参考，日常不再调用）
 
 | 命令 | 用途 | 是否写文件 |
 | --- | --- | --- |
@@ -664,16 +570,16 @@ QQQ/NDX：
 | `python record_nasdaq_etf.py --dry-run` | 预览当前数据 | 否 |
 | `python record_nasdaq_etf.py --force` | 绕过星期、收盘时间和 ETF 行情日期检查 | 是，谨慎使用 |
 | `python record_nasdaq_etf.py --init-only` | 按已有数据重建清单和页面壳 | 是 |
-| `python record_nasdaq_etf.py --backfill-date YYYY-MM-DD` | 补 ETF 和对应 QQQ/NDX | 是 |
+| `python record_nasdaq_etf.py --backfill-date YYYY-MM-DD` | 补 ETF 和对应 QQQ/NDX（节后首日会因估值日期不匹配失败） | 是 |
 | `python record_nasdaq_etf.py --backfill-benchmark-date YYYY-MM-DD` | 只补某个美股行情日 | 是 |
 | `python record_nasdaq_etf.py --track-date YYYY-MM-DD` | 配合基准补录指定跟踪日期 | 是 |
 | `python record_nasdaq_etf.py --refresh-benchmarks` | 重算已有基准行并补部分缺口 | 是 |
-| `python record_nasdaq_etf.py --refresh-trends` | 补缺失分钟走势（HTTP 兜底链；优先用 westock `data_minute` 在会话中回填） | 是 |
+| `python record_nasdaq_etf.py --refresh-trends` | 已弃用（no-op） | 否 |
 | `python record_nasdaq_etf.py --output PATH` | 指定页面输出路径 | 取决于其他参数 |
 | `python record_nasdaq_etf.py --data-output PATH` | 指定数据索引输出路径 | 取决于其他参数 |
 | `python record_nasdaq_etf.py --source-config PATH` | 指定数据源配置 | 取决于其他参数 |
 
-`--refresh-benchmarks` 的边界：
+`--refresh-benchmarks` 的边界（历史脚本）：
 
 - 会重算现有 QQQ/NDX 记录的收盘、涨幅、历史最高收盘和回撤。
 - 会尝试为已有 ETF 日期补基准记录。
@@ -715,8 +621,6 @@ index.html
 - 表头和表格内容居中。
 - 正涨幅和正溢价显示红色，负值显示绿色。
 - 回撤为负值，按绿色显示并在表格上方突出展示。
-- 折线图读取每行的 `trend.points`。
-- 少于两个走势点时显示“未记录走势”。
 - “最近更新”取所有记录中最大的 `recorded_at`。
 - 页面加载数据时使用 `cache: "no-cache"`，但 GitHub Pages 或浏览器仍可能短暂保留旧静态文件。
 
@@ -744,32 +648,29 @@ https://auroka.github.io/nasdaq-etf/
 
 ## 13. 自动任务
 
-自动任务属于本机 Codex Desktop 状态，不在 Git 仓库中。
+自动任务属于本机 WorkBuddy 状态，不在 Git 仓库中。
 
 ```text
-Automation ID：etf-2
-名称：纳指跟踪同线程记录
+Automation ID：automation-1783565847240
 状态：ACTIVE
 时区：Asia/Shanghai
 计划：周一至周五 15:30
-配置路径：C:\Users\Administrator\.codex\automations\etf-2\automation.toml
 ```
 
 自动任务行为：
 
-1. 在本项目执行 `python record_nasdaq_etf.py`。
-2. 记录三只 ETF 和 QQQ/NDX。
-3. 更新每日 JSON、`manifest.json` 和 `index.html`。
+1. `git pull --ff-only origin main`。
+2. 在本项目执行 `python fetch_nasdaq_data.py --json`（唯一取数入口，自动补齐所有缺口）。
+3. 自动更新每日 JSON、`manifest.json` 和 `index.html`。
 4. 有 Git 变化时使用 `Record Nasdaq tracking YYYY-MM-DD` 提交并推送。
 5. 没有变化时不创建空提交。
 6. 只在当前指定对话中报告结果。
 
 注意：
 
-- 周一至周五触发不等于当天一定是中国交易日，脚本会通过行情日期进行二次判断。
-- Automation 依赖本机、Codex Desktop、网络、Git SSH 和目标对话状态。
-- 新机器或其他 Agent 不能假设该 Automation 已存在。
-- 调整自动任务时优先使用 Codex 的 automation 管理工具，不直接手改 TOML；只有管理工具不可用时才考虑人工处理。
+- 周一至周五触发不等于当天一定是中国交易日，脚本按实际行情日历判断。
+- 自动任务依赖本机、网络、Git SSH 和目标对话状态，新机器不能假设它已存在。
+- 旧 prompt 备份在 `automation-backups/`，仅供追溯，不要按旧 prompt 执行。
 
 ## 14. 常见故障排查
 
@@ -779,24 +680,24 @@ Automation ID：etf-2
 
 处理：
 
-1. 优先改用腾讯自选股连接器（westock MCP）取数（`data_quote`/`data_kline`/`data_minute`/`data_etf`），不要再逐站重试 HTTP。
-2. 记录失败的数据源域名/接口到日志。
-3. 不要把接口失败误当成空数据写入。
-4. 若 westock 也失败，保留当日缺口，稍后重试原命令或待连接器恢复。
+1. 重跑一次 `python fetch_nasdaq_data.py`（脚本内置多源重试与 HTTP/HTTPS 降级）。
+2. 记录失败的数据源域名/接口到日志，确认是单源故障还是网络整体不可达。
+3. 不要把接口失败误当成空数据写入；脚本已保证「任一目标日取数失败则整体不写」。
+4. 持续失败时保留当日缺口，稍后重试原命令。
 
 ### 14.2 ETF 历史 K 线失败
 
-腾讯自选股连接器 `data_kline` 优先；HTTP 兜底（东方财富→新浪）仅无 westock 会话时使用。若都失败，补录终止。不要手工填入未经来源确认的收盘价。
+按 新浪日 K → 腾讯日 K → 东财 K 线 的顺序降级，三者都失败则补录终止。不要手工填入未经来源确认的收盘价。
 
 ### 14.3 估值数据缺失
 
-含义：腾讯自选股 ETF 详情的 `nav` 字段为空或请求失败。
+含义：官方净值接口与 tinyright 镜像都取不到目标日的净值。
 
 处理：
 
 1. 确认 ETF 代码是否正确（`sh513100` / `sz159501` / `sz159659`）。
-2. 稍后重试 westock `data_etf`。`nav` 字段对应 QDII ETF 最新官方净值，与原来使用的 T-1 IOPV 数值一致。
-3. 若持续失败，记录缺口等待连接器恢复，不要回退到 HTTP 估值源。
+2. 确认目标日之前最近的中国交易日是否已公布官方净值（QDII 净值通常 T+1/T+2 公布）。
+3. 脚本会依次回退 tinyright IOPV → tinyright T-1 → 官方净值×纳指涨跌推算，并在 `source_ids` 标注；长假后首日的推算值偏差会在净值补齐后自愈。
 
 ### 14.4 价格和涨幅正确，但溢价率错误
 
@@ -808,31 +709,11 @@ price / estimate - 1
 
 如果复算结果与 JSON 不一致，检查 `estimate` 值是否正确。溢价率由脚本直接计算，不依赖外部接口返回的溢折价率。
 
-### 14.5 页面没有走势
-
-检查目标行：
-
-```text
-trend 是否为 null
-trend.points 是否少于 2 个点
-trend.date 是否匹配记录日期
-```
-
-缺失时用 westock `data_minute` 取分时回填，或执行 `--refresh-trends`（HTTP 兜底链）补录。
-
-### 14.6 页面走势明显错误
-
-不要只重复执行 `--refresh-trends`，因为已有且不超过 `64` 点的走势会被跳过。按“10.3 修复已有但错误的走势”处理，并核对源、日期、开收盘时间和最终值。
-
-### 14.7 QQQ/NDX 出现盘前或盘后数据
-
-Nasdaq chart 路径会过滤常规交易时段。若错误数据来自历史遗留或 Yahoo 兜底，清空目标 `trend` 后重新获取，并确认最终 JSON 只包含 `9:30 AM` 至 `4:00 PM`。
-
-### 14.8 QQQ/NDX 最新日期看起来少一天
+### 14.5 QQQ/NDX 最新日期看起来少一天
 
 先区分 `track_date` 和 `quote_date`。中国时间下午执行时，美国当日尚未收盘，所以记录的是最近一个已收盘美股交易日，这是正常设计。
 
-### 14.9 浏览器仍显示旧数据
+### 14.6 浏览器仍显示旧数据
 
 依次检查：
 
@@ -843,7 +724,7 @@ Nasdaq chart 路径会过滤常规交易时段。若错误数据来自历史遗�
 5. Pages 是否部署完成。
 6. 浏览器是否需要强制刷新。
 
-### 14.10 `npm run build` 后文件很多
+### 14.7 `npm run build` 后文件很多
 
 预期只应改动：
 
@@ -860,7 +741,7 @@ index.html
 ### 15.1 修改 Python 后
 
 ```powershell
-python -m py_compile record_nasdaq_etf.py
+python -m py_compile fetch_nasdaq_data.py record_nasdaq_etf.py
 ```
 
 涉及数据源或解析逻辑时，再使用 `--dry-run` 或指定日期补录验证真实接口响应。
@@ -880,7 +761,6 @@ npm run build
 - ETF 每个交易日通常有三条且代码唯一。
 - QQQ/NDX 同一 `quote_date` 下各一条且标的唯一。
 - 百分比字段是数值比例，不是字符串。
-- 走势最终点与表格收盘值一致。
 - `source_ids` 能在 `data_sources.json` 中找到。
 - `git diff` 不包含无关或意外文件。
 
@@ -901,12 +781,11 @@ npm run build
 
 - 上游接口没有稳定性承诺，字段或访问策略可能变化。
 - 项目没有自动化测试套件和 lint 命令，目前主要依赖编译、类型检查、JSON 校验和真实数据抽查。
-- 脚本只识别周末，不内置交易所节假日日历。
-- `--refresh-trends` 不会替换已存在且点数不超过 `64` 的错误走势。
+- 交易日历来自新浪/腾讯日 K 与 Nasdaq 历史行情的实际日期，不依赖内置节假日表；上游缺数据会直接表现为日历缺口。
 - 每次页面加载会读取清单中的全部每日文件；数据规模显著增长后，需要考虑按月清单、分页或按需加载。
 - 写入时会重建清单并写出所有已加载每日记录；手工删除清单引用前应同时检查是否留下未引用的孤立文件。
 - QQQ/NDX 去重键为 `quote_date + symbol`，无法在同一美股行情日保留多个不同 `track_date` 版本。
-- ETF 溢价率使用写入时刻的最新可用净值计算；历史补录时使用的净值与实时记录时可能不同（均为当时最新的官方净值，数值上与原来的 T-1 IOPV 一致）。
+- ETF `estimate` 固定取目标日之前最近一个中国交易日的官方净值；官方净值未公布时才回退镜像或推算，因此长假后首个交易日的溢价率会带推算误差（`source_ids` 有标注）。
 - 自动任务是本机状态，不随 Git 仓库迁移。
 
 ## 17. Agent 接手检查清单
@@ -916,7 +795,7 @@ npm run build
 - [ ] 使用 UTF-8 读取 `CLAUDE.md`、`README.md` 和本文件。
 - [ ] 查看 `git status --short --branch`，保留现有改动。
 - [ ] 查看 `data/manifest.json` 的 `generated_at`、日期范围和计数。
-- [ ] 确认用户要求的是日常更新、历史补录、走势修复还是页面修改。
+- [ ] 确认用户要求的是日常更新、历史补录还是页面修改。
 - [ ] 涉及当前或历史行情时，实际运行接口验证，不凭记忆填写。
 
 数据写入后：
@@ -925,7 +804,6 @@ npm run build
 - [ ] 复算溢价率。
 - [ ] 核对 QQQ/NDX 的 `track_date` 与 `quote_date`。
 - [ ] 确认历史最高点按收盘价计算。
-- [ ] 核对分钟走势日期、时间范围和最终值。
 - [ ] 解析所有变更 JSON。
 - [ ] 运行必要的 Python 编译或前端构建检查。
 - [ ] 查看 `git diff`，只提交相关文件。
@@ -934,7 +812,7 @@ npm run build
 遇到失败时：
 
 - [ ] 保留原有正确记录。
-- [ ] 明确报告是跳过、接口失败还是走势缺失。
+- [ ] 明确报告是跳过、接口失败还是数据源缺数据。
 - [ ] 不通过删除校验或注释错误来制造成功结果。
 
 ## 18. 最短操作路径
@@ -943,7 +821,7 @@ npm run build
 
 ```powershell
 cd D:\DevProjects\Personal\codex-something\nasdaq-etf
-python record_nasdaq_etf.py
+python fetch_nasdaq_data.py
 git status --short
 # 核对数据后
 git add index.html data\manifest.json data\daily-records
@@ -954,9 +832,8 @@ git push origin main
 历史补录：
 
 ```powershell
-python record_nasdaq_etf.py --backfill-date YYYY-MM-DD --dry-run
-python record_nasdaq_etf.py --backfill-date YYYY-MM-DD
-python record_nasdaq_etf.py --refresh-trends
+python fetch_nasdaq_data.py --dry-run
+python fetch_nasdaq_data.py
 ```
 
 前端修改：
@@ -968,4 +845,4 @@ npm run build
 python -m http.server 5173
 ```
 
-只要严格遵守日期口径、估值日期、收盘价历史高点和走势最终点四条规则，项目的数据就不会在“看起来正常”的情况下悄悄偏离真实含义。
+只要严格遵守日期口径、估值日期、收盘价历史高点和基准日期四条规则，项目的数据就不会在“看起来正常”的情况下悄悄偏离真实含义。

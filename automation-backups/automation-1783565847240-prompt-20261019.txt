@@ -1,0 +1,22 @@
+执行纳指ETF项目的每日数据更新，按以下顺序操作：
+
+0. 数据源约定（最高优先，用户强制）：**所有行情数据一律通过腾讯自选股连接器（westock MCP）获取，不访问任何 HTTP 行情网站**（东财/新浪/腾讯 gtimg/Yahoo/Nasdaq 等均已停用）。若 westock MCP 工具可用，取数步骤全部用 westock 工具完成；westock 完全不可用时才允许运行脚本 HTTP 兜底并在日志中记录失败原因。另外：**走势图已下线（2026-09-08），本任务不再采集/补录/使用任何分时分钟走势（trend）数据，不要调用 data_minute，也不要校验/补 trend**。
+
+1. 进入项目目录 D:/DevProjects/Personal/codex-something/nasdaq-etf
+2. 执行 git pull --ff-only origin main 拉取最新代码
+3. 优先用 westock MCP 工具采集当天收盘数据：
+   - `data_quote`：3 只 ETF（sh513100/sz159501/sz159659）+ QQQ(usQQQ.OQ)/NDX(usNDX) 收盘价、当天涨幅
+   - `data_etf` 或 data_quote 中的估值字段：3 只 ETF 的 estimate
+   - `data_kline`（period=day）：日 K，用于 QQQ/NDX history_high / 回撤核对
+   - 校验后写入 data/daily-records/YYYY/MM/YYYY-MM-DD.json 并调用脚本重建页面（index.html + manifest.json，可复用 record_nasdaq_etf.py 的写入函数 write_rows/write_page_and_data）；新记录不需要 trend（保持 trend=null）
+   - 若 westock 不可用：执行 python record_nasdaq_etf.py 采集（HTTP 兜底），记录失败原因
+   - **记下本次实际采集数据的中国交易日 D**：正常采集当天收盘数据时 D=当天（如 2026-09-09）；若本轮是补录，则 D=被补录的日期。D 即本次写入 daily-records 的 ETF 记录 trade_date，也是第 6 步 commit message 用的日期。
+4. 如果脚本/westock 返回 "market has not closed yet"（非收盘时段触发）：
+   a. 检查上一个中国交易日（非当天）的 data/daily-records/YYYY/MM/YYYY-MM-DD.json 是否存在
+   b. 如果缺失，询问用户「检测到前一交易日 YYYY-MM-DD 数据缺失，是否补齐？」
+   c. 如果用户确认，用 westock MCP（data_quote date=/data_kline）补齐该日数据，或执行 python record_nasdaq_etf.py --backfill-date YYYY-MM-DD（此时 D=该补录日期）
+   d. 补齐后继续执行第5步校验和提交流程
+5. 检查数据：确认 ETF 三条记录代码为 513100、159501、159659，溢价率按 price/estimate-1 复算无误
+6. 如果数据正确且 git status 有变更：执行 git add index.html data/manifest.json data/daily-records，git commit -m "Record Nasdaq tracking D"（D 为第 3 步记下的本次实际采集交易日），git push origin main
+7. 如果没有变更，跳过提交
+8. 只在当前对话中报告结果，不要发到其他渠道

@@ -13,7 +13,9 @@
 
 ## 文件约定
 - `data_sources.json`：项目唯一的数据源和跟踪标的配置入口；新增或调整接口、代码、标的时先改这里。
-- `record_nasdaq_etf.py`：采集、补录、去重更新和 React 页面壳刷新脚本。
+- `fetch_nasdaq_data.py`：**当前唯一取数入口**。自动判断收盘状态、补齐所有缺失交易日、多源交叉校验、写后审计。
+- `record_nasdaq_etf.py`：历史脚本（早期 HTTP 实现，保留供参考与旧命令兼容），日常不再调用。
+- `.workbuddy/skills/nasdaq-data-completion/SKILL.md`：项目级 skill，「记录/补全纳指数据」任务优先使用。
 - `data/manifest.json`：页面数据索引；只放生成时间、跟踪标的、数据源和每日文件引用。
 - `data/daily-records/YYYY/MM/YYYY-MM-DD.json`：按交易日期和年月目录拆分的每日记录；ETF 使用 `trade_date` 归档，QQQ/NDX 使用 `quote_date` 归档；相同日期和代码/标的重复运行时更新原行。
 - `src/`：React + TypeScript 前端源码；表格、tab、回撤摘要都在这里维护。
@@ -29,50 +31,46 @@
 - 文件命名要能直接表达用途；多余的缓存、日志、旧数据文件和临时文件要删除，不能因为"也许有用"长期保留。
 - 数据文件只保留一种正式入口：`data/manifest.json` 加 `data/daily-records/YYYY/MM/YYYY-MM-DD.json`；旧的单文件数据结构只允许作为脚本兼容读取来源，不再提交。
 
-## 数据获取规则（最高优先，2026-09-03 用户强制约定）
+## 数据获取规则（2026-10-19 更新，覆盖 2026-09-03 的 westock 约定）
 
-**所有行情数据一律通过腾讯自选股连接器（westock MCP）获取，不再从 HTTP 网站抓取。**
+**日常取数一律使用 `fetch_nasdaq_data.py`，并通过项目 skill `nasdaq-data-completion` 触发。**
 
-适用场景：日常收盘采集、`--backfill-date` 回填、查 IOPV/估值、QQQ/NDX 行情等一切取数操作。
-westock 实测可覆盖本项目全部数据需求（ETF 三只 + QQQ/NDX 的收盘价、涨幅、估值、历史最高），不再需要 HTTP 兜底源。
-走势图下线后无需取分时（`data_minute` 不再使用）。
+- 背景：腾讯自选股连接器（westock MCP）自 2026-09 起长期不可用（每轮 ToolSearch 都查不到 `data_quote` 等工具），继续依赖它会导致每天都需要人工兜底。2026-10-19 起改为 HTTP 多源交叉校验，仍满足「准确 + 完整」两条硬要求。
+- 唯一取数入口：`python fetch_nasdaq_data.py`（自动判断是否收盘、补齐所有缺失交易日、写入后按市场日历审计）。
+- 数据源（完整配置见 `data_sources.json`）：
 
-| 数据 | westock 工具 | 代码格式 |
+| 数据 | 主源 | 校验/兜底 |
 | --- | --- | --- |
-| ETF 实时/历史收盘、涨幅 | `data_quote`（支持 `date=YYYY-MM-DD` 历史快照） | `sh513100` / `sz159501` / `sz159659` |
-| ETF 估值/净值（estimate） | `data_etf`（nav 字段）或 `data_quote` 返回的估值字段 | 同上 |
-| ETF 历史日 K（回填补录） | `data_kline`（period=day, start/end） | 同上 |
-| QQQ 收盘/涨幅 | `data_quote`（date 指定美股行情日） | `usQQQ.OQ` |
-| NDX 收盘/涨幅 | `data_quote` | `usNDX`（勿用裸 NDX） |
-| QQQ/NDX 历史日 K | `data_kline`（长区间取 history_high / 回撤） | `usQQQ.OQ` / `usNDX` |
-| 代码/名称搜索 | `data_search` | — |
+| ETF 收盘价、日涨幅 | 新浪日 K `quotes.sina.cn` | 腾讯日 K `web.ifzq.gtimg.cn`；两者不一致时用东财 K 线仲裁 |
+| ETF 净值（estimate） | 东财官方净值 `api.fund.eastmoney.com/f10/lsjz`（DWJZ） | tinyright IOPV → tinyright T-1 → 纳指涨跌推算 |
+| QQQ/NDX 收盘、涨幅、历史最高 | Nasdaq 官方 `api.nasdaq.com/api/quote/.../historical` | 新浪美股日 K（NDX 必须用 `.NDX`） |
 
 规则要点：
-- 查询行情一律先走 westock MCP，只有 westock 完全不可用时才允许回退 HTTP 接口（东财/新浪/腾讯），且要把失败原因记入日志，不要静默切换。
+- 任一关键数值必须两源一致；不一致且无法仲裁时**整体终止，不写入任何数据**。
+- 写入前必须取齐所有目标日；写入后按中国/美国交易日历审计，缺一天即视为失败。
 - 溢价率 = `price / estimate - 1`，必须复算校验与 premium 字段一致。
-- `record_nasdaq_etf.py` 内置 HTTP 源作为最后兜底保留，但日常取数不再主动访问 HTTP 行情站。
+- `record_nasdaq_etf.py` 降级为历史脚本（存在节后首日估值失败等问题），日常不再调用。
+
+### Skill
+`.workbuddy/skills/nasdaq-data-completion/SKILL.md`：本项目所有「记录 / 更新 / 补全纳指数据」的任务优先使用该 skill，不要手工取数或直接改 JSON。
 
 ### 历史补录与回填
-| 数据 | westock 顺序 |
-| --- | --- |
-| 历史收盘和涨幅 | `data_kline` / `data_quote`(date) |
-| 估值（净值） | `data_etf`，记录写入时刻的最新可用净值 |
+
+```text
+python fetch_nasdaq_data.py                # 自动补齐（推荐）
+python fetch_nasdaq_data.py --dry-run      # 预览
+python fetch_nasdaq_data.py --check        # 本地体检（无网络）
+python fetch_nasdaq_data.py --date YYYY-MM-DD  # 强制重录某天
+```
 
 ### QQQ/NDX 日线与回撤
-```text
-data_quote / data_kline (腾讯自选股)
-```
-历史最高收盘由项目已有记录中出现的最高收盘价决定：每次记录时将当前 `value` 与已有记录中的 `history_high` 比较，取较大值。
+历史最高收盘由「Nasdaq 全历史收盘序列 ∪ 新浪美股全历史收盘序列」取截至 `quote_date` 的最大值，不使用盘中最高价。
 
 ## 执行约定
 - 默认使用 UTF-8。
-- **取数主路径（会话/自动化执行时）**：用 westock MCP 工具（`data_quote`/`data_etf`/`data_kline`/`data_search`）取数，然后直接写入每日 JSON 或调用 `write_page_and_data` 重建页面；不要先跑到 HTTP 行情站逐站探测。
-- 日常自动记录使用 `python record_nasdaq_etf.py`（脚本本身是纯 HTTP 实现，其取数链仅在无 westock 会话或连接器不可用时作为兜底，不允许作为默认取数路径）。
-- 补录某天使用 `python record_nasdaq_etf.py --backfill-date YYYY-MM-DD`，会同时补录 ETF 和 QQQ/NDX；会话中优先用 westock 取数后回填。
-- 历史 ETF 价格和涨幅优先使用腾讯自选股历史 K 线/行情，HTTP 源（东方财富、新浪）仅兜底。
-- ETF 当前净值使用腾讯自选股 ETF 详情的 `nav` 字段。溢价率直接按 `price / nav - 1` 计算，不依赖外部估值服务。
-- 刷新并补齐已记录 ETF 交易日对应的 QQQ/NDX 使用 `python record_nasdaq_etf.py --refresh-benchmarks`。
-- 只补某个美股行情日的 QQQ/NDX 使用 `python record_nasdaq_etf.py --backfill-benchmark-date YYYY-MM-DD`，默认跟踪日期为该行情日后的下一个工作日。
-- 修改脚本后至少运行 `python -m py_compile record_nasdaq_etf.py`。
+- **取数主路径**：`python fetch_nasdaq_data.py`（自动补齐 + 写后审计），或通过 skill `nasdaq-data-completion` 触发；不要先逐站手工探测数据源。
+- 脚本会自行判断「A 股是否收盘」：15:00 前不记当天 ETF，只补 QQQ/NDX；非交易日不产生 ETF 行。
+- 补录某天使用 `python fetch_nasdaq_data.py --date YYYY-MM-DD`（会覆盖该日记录）。
+- 修改脚本后至少运行 `python -m py_compile fetch_nasdaq_data.py`，并用 `--dry-run` 验证真实取数。
 - 修改前端后运行 `npm run typecheck` 和 `npm run build`。
 - 本地查看使用 `python -m http.server 5173`，访问 `http://127.0.0.1:5173/`。

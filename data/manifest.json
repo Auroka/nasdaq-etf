@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-16 16:02:39",
+  "generated_at": "2026-10-19 11:46:05",
   "etfs": [
     {
       "code": "513100",
@@ -21,7 +21,8 @@
       "yahoo_symbol": "QQQ",
       "nasdaq_symbol": "QQQ",
       "nasdaq_assetclass": "etf",
-      "unit": "USD"
+      "unit": "USD",
+      "sina_symbol": "QQQ"
     },
     {
       "symbol": "NDX",
@@ -29,78 +30,127 @@
       "yahoo_symbol": "^NDX",
       "nasdaq_symbol": "NDX",
       "nasdaq_assetclass": "index",
-      "unit": "points"
+      "unit": "points",
+      "sina_symbol": ".NDX"
     }
   ],
   "sources": [
     {
-      "id": "westock_quote",
-      "name": "腾讯自选股实时行情",
-      "purpose": "【唯一取数源，2026-09-03 起】A股纳指 ETF 当前价格、当天涨幅；QQQ 和 NDX 收盘价/点位和当天涨幅（主数据源）",
-      "url_template": "mcp:westock-mcp:data_quote",
+      "id": "sina_daily_kline",
+      "name": "新浪财经日 K 线",
+      "purpose": "【主源，2026-10-19 起】三只纳指 ETF 的收盘价与日涨幅（日 K 由脚本自行计算相邻收盘）",
+      "url_template": "https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20_{symbol}_240=/CN_MarketData.getKLineData?symbol={symbol}&scale=240&ma=no&datalen={count}",
       "enabled": true,
       "status": "active"
     },
     {
-      "id": "westock_etf_detail",
-      "name": "腾讯自选股 ETF 详情",
-      "purpose": "【唯一取数源，2026-09-03 起】A股纳指 ETF 当前净值（替代 T-1 估值），用于计算溢价率",
-      "url_template": "mcp:westock-mcp:data_etf",
+      "id": "tencent_kline",
+      "name": "腾讯证券日 K 线",
+      "purpose": "【校验源】ETF 收盘价二次校验；收盘后新浪日 K 未更新时作为当天收盘价来源",
+      "url_template": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={symbol},day,,,{count},",
       "enabled": true,
       "status": "active"
     },
     {
-      "id": "westock_minute",
-      "name": "腾讯自选股分时数据",
-      "purpose": "【唯一取数源，2026-09-03 起】A股纳指 ETF、QQQ 和 NDX 分钟走势（主数据源）",
-      "url_template": "mcp:westock-mcp:data_minute",
+      "id": "eastmoney_kline",
+      "name": "东方财富历史 K 线",
+      "purpose": "【仲裁源】新浪与腾讯收盘价不一致时的第三方仲裁；接口不稳定，仅按需调用",
+      "url_template": "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid={secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=101&fqt=1&beg={date}&end={date}",
+      "enabled": true,
+      "status": "standby"
+    },
+    {
+      "id": "eastmoney_fund_nav",
+      "name": "东方财富基金净值",
+      "purpose": "【主源】ETF 官方单位净值（DWJZ），用于计算溢价率；estimate(D)=D 前一中国交易日净值",
+      "url_template": "https://api.fund.eastmoney.com/f10/lsjz?callback=&fundCode={code}&pageIndex=1&pageSize=1&startDate={date}&endDate={date}",
       "enabled": true,
       "status": "active"
     },
     {
-      "id": "westock_kline",
-      "name": "腾讯自选股历史 K 线",
-      "purpose": "【唯一取数源，2026-09-03 起】A股纳指 ETF 历史收盘价、QQQ/NDX 历史收盘价；计算历史最高收盘点和回撤",
-      "url_template": "mcp:westock-mcp:data_kline",
+      "id": "tinyright_iopv",
+      "name": "tinyright 官方净值镜像",
+      "purpose": "【校验/兜底】官方净值镜像，日期与目标一致时可用",
+      "url_template": "https://n.tinyright.com/",
+      "enabled": true,
+      "status": "standby"
+    },
+    {
+      "id": "tinyright_t1",
+      "name": "tinyright T-1 估值",
+      "purpose": "【兜底】官方净值尚未公布时的 T-1 估值；长假后存在已知系统性偏差，仅在前述来源缺失时使用",
+      "url_template": "https://n.tinyright.com/",
+      "enabled": true,
+      "status": "standby"
+    },
+    {
+      "id": "nasdaq_api_historical",
+      "name": "Nasdaq 官方历史行情",
+      "purpose": "【主源】QQQ/NDX 收盘价、当天涨幅、历史最高收盘与回撤（必须带 fromdate；NDX 用 assetclass=index）",
+      "url_template": "https://api.nasdaq.com/api/quote/{symbol}/historical?assetclass={assetclass}&fromdate={fromdate}&todate={todate}&limit=30",
+      "enabled": true,
+      "status": "active"
+    },
+    {
+      "id": "sina_us_daily",
+      "name": "新浪财经美股日 K 线",
+      "purpose": "【校验源】QQQ / NDX 收盘价二次校验（NDX 使用 .NDX）",
+      "url_template": "https://stock.finance.sina.com.cn/usstock/api/jsonp.php/var%20_x=/US_MinKService.getDailyK?symbol={symbol}&___qn=3",
       "enabled": true,
       "status": "active"
     },
     {
       "id": "eastmoney_quote",
       "name": "东方财富实时行情",
-      "purpose": "【已停用，2026-09-03 起取数一律走 westock MCP，不再访问 HTTP 行情站；仅历史记录 source_ids 引用】A股纳指 ETF 当前价格、当天涨幅和行情日期（备用）",
+      "purpose": "【历史引用】早期记录使用；新链路不再以此为主源",
       "url_template": "https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f12,f14,f2,f3,f13,f124&secids={secids}",
       "enabled": false,
       "status": "retired"
     },
     {
-      "id": "eastmoney_kline",
-      "name": "东方财富历史 K 线",
-      "purpose": "【已停用，2026-09-03 起取数一律走 westock MCP，不再访问 HTTP 行情站；仅历史记录 source_ids 引用】A股纳指 ETF 补录日期的收盘价和当天涨幅（备用）",
-      "url_template": "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid={secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=101&fqt=1&beg={date}&end={date}",
+      "id": "westock_quote",
+      "name": "腾讯自选股实时行情",
+      "purpose": "【已停用】连接器自 2026-09 起长期不可用；新链路改用 HTTP 多源交叉校验",
+      "url_template": "mcp:westock-mcp:data_quote",
       "enabled": false,
-      "status": "retired"
+      "status": "unavailable"
     },
     {
-      "id": "sina_daily_kline",
-      "name": "新浪财经日 K 线",
-      "purpose": "【已停用，2026-09-03 起取数一律走 westock MCP，不再访问 HTTP 行情站；仅历史记录 source_ids 引用】东方财富不可用时补录 A股纳指 ETF 历史收盘价和涨幅",
-      "url_template": "https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20_{symbol}_240=/CN_MarketData.getKLineData?symbol={symbol}&scale=240&ma=no&datalen={count}",
+      "id": "westock_etf_detail",
+      "name": "腾讯自选股 ETF 详情",
+      "purpose": "【已停用】连接器自 2026-09 起长期不可用",
+      "url_template": "mcp:westock-mcp:data_etf",
       "enabled": false,
-      "status": "retired"
+      "status": "unavailable"
     },
     {
-      "id": "eastmoney_fund_nav",
-      "name": "东方财富基金净值",
-      "purpose": "【已停用，2026-09-03 起取数一律走 westock MCP，不再访问 HTTP 行情站；仅历史记录 source_ids 引用】A股纳指 ETF 历史净值回填（tinyright 估值日期不匹配时使用）",
-      "url_template": "https://api.fund.eastmoney.com/f10/lsjz?callback=&fundCode={code}&pageIndex=1&pageSize=1&startDate={date}&endDate={date}",
+      "id": "westock_kline",
+      "name": "腾讯自选股历史 K 线",
+      "purpose": "【已停用】连接器自 2026-09 起长期不可用",
+      "url_template": "mcp:westock-mcp:data_kline",
       "enabled": false,
-      "status": "retired"
+      "status": "unavailable"
+    },
+    {
+      "id": "westock_minute",
+      "name": "腾讯自选股分时数据",
+      "purpose": "【已停用】走势图于 2026-09-08 下线，且连接器长期不可用",
+      "url_template": "mcp:westock-mcp:data_minute",
+      "enabled": false,
+      "status": "unavailable"
+    },
+    {
+      "id": "manual_historical_quote",
+      "name": "人工保留的历史行情",
+      "purpose": "人工保留的历史行情（非实时取数源）",
+      "url_template": "",
+      "enabled": false,
+      "status": "historic"
     },
     {
       "id": "eastmoney_trend",
       "name": "东方财富分钟走势",
-      "purpose": "【已停用，2026-09-03 起取数一律走 westock MCP，不再访问 HTTP 行情站；仅历史记录 source_ids 引用】A股纳指 ETF 当天分钟走势折线图（备用）",
+      "purpose": "【已停用】走势图于 2026-09-08 下线，仅历史记录 source_ids 引用",
       "url_template": "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid={secid}&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11&fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&iscca=0&ndays={days}",
       "enabled": false,
       "status": "retired"
@@ -108,7 +158,7 @@
     {
       "id": "sina_minute_kline",
       "name": "新浪财经分钟 K 线",
-      "purpose": "【已停用，2026-09-03 起取数一律走 westock MCP，不再访问 HTTP 行情站；仅历史记录 source_ids 引用】A股纳指 ETF 分钟走势兜底补录（备用）",
+      "purpose": "【已停用】走势图于 2026-09-08 下线，仅历史记录 source_ids 引用",
       "url_template": "https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20_{symbol}_5=/CN_MarketData.getKLineData?symbol={symbol}&scale=5&ma=no&datalen={count}",
       "enabled": false,
       "status": "retired"
@@ -116,7 +166,7 @@
     {
       "id": "tencent_minute",
       "name": "腾讯证券当天分时",
-      "purpose": "【已停用，2026-09-03 起取数一律走 westock MCP，不再访问 HTTP 行情站；仅历史记录 source_ids 引用】A股纳指 ETF 当天分钟走势兜底（备用）",
+      "purpose": "【已停用】走势图于 2026-09-08 下线，仅历史记录 source_ids 引用",
       "url_template": "https://web.ifzq.gtimg.cn/appstock/app/minute/query?code={symbol}",
       "enabled": false,
       "status": "retired"
@@ -124,7 +174,7 @@
     {
       "id": "yahoo_chart",
       "name": "Yahoo Finance 日线行情",
-      "purpose": "【已停用，2026-09-03 起取数一律走 westock MCP，不再访问 HTTP 行情站；仅历史记录 source_ids 引用】Nasdaq 官方 API 不可用时，作为 QQQ 和 NDX 日线行情备用源",
+      "purpose": "【已停用】2026-09-03 停用，且 Yahoo 对 Python 请求返回 403",
       "url_template": "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=30y&interval=1d&includePrePost=false&events=history",
       "enabled": false,
       "status": "retired"
@@ -132,34 +182,18 @@
     {
       "id": "yahoo_intraday_chart",
       "name": "Yahoo Finance 分钟行情",
-      "purpose": "【已停用，2026-09-03 起取数一律走 westock MCP，不再访问 HTTP 行情站；仅历史记录 source_ids 引用】腾讯自选股或 Nasdaq 分钟走势不可用时，作为 ETF、QQQ 和 NDX 历史分钟走势备用源",
+      "purpose": "【已停用】走势图下线后不再使用",
       "url_template": "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?period1={period1}&period2={period2}&interval={interval}&includePrePost=false&events=history",
-      "enabled": false,
-      "status": "retired"
-    },
-    {
-      "id": "nasdaq_api_historical",
-      "name": "Nasdaq 官方历史行情",
-      "purpose": "【已停用，2026-09-03 起取数一律走 westock MCP，不再访问 HTTP 行情站；仅历史记录 source_ids 引用】默认获取 QQQ 和 NDX 的目标日收盘价、当天涨幅、历史最高收盘点/价和回撤",
-      "url_template": "https://api.nasdaq.com/api/quote/{symbol}/historical?assetclass={assetclass}&fromdate={fromdate}&todate={todate}&limit=30",
       "enabled": false,
       "status": "retired"
     },
     {
       "id": "nasdaq_api_chart",
       "name": "Nasdaq 官方分钟走势",
-      "purpose": "【已停用，2026-09-03 起取数一律走 westock MCP，不再访问 HTTP 行情站；仅历史记录 source_ids 引用】QQQ 和 NDX 当天分钟走势折线图；历史接口目标日缺失时补最新价",
+      "purpose": "【已停用】走势图下线后不再使用",
       "url_template": "https://api.nasdaq.com/api/quote/{symbol}/chart?assetclass={assetclass}",
       "enabled": false,
       "status": "retired"
-    },
-    {
-      "id": "manual_historical_quote",
-      "name": "人工保留的历史行情",
-      "purpose": "人工保留的历史行情（非实时取数源）",
-      "url": "",
-      "enabled": false,
-      "status": "historic"
     }
   ],
   "daily_files": [
@@ -167,7 +201,7 @@
       "date": "2026-10-16",
       "file": "daily-records/2026/10/2026-10-16.json",
       "etf_count": 3,
-      "benchmark_count": 0
+      "benchmark_count": 2
     },
     {
       "date": "2026-10-15",
@@ -212,10 +246,34 @@
       "benchmark_count": 2
     },
     {
+      "date": "2026-10-06",
+      "file": "daily-records/2026/10/2026-10-06.json",
+      "etf_count": 0,
+      "benchmark_count": 2
+    },
+    {
+      "date": "2026-10-05",
+      "file": "daily-records/2026/10/2026-10-05.json",
+      "etf_count": 0,
+      "benchmark_count": 2
+    },
+    {
+      "date": "2026-10-02",
+      "file": "daily-records/2026/10/2026-10-02.json",
+      "etf_count": 0,
+      "benchmark_count": 2
+    },
+    {
+      "date": "2026-10-01",
+      "file": "daily-records/2026/10/2026-10-01.json",
+      "etf_count": 0,
+      "benchmark_count": 2
+    },
+    {
       "date": "2026-09-30",
       "file": "daily-records/2026/09/2026-09-30.json",
       "etf_count": 3,
-      "benchmark_count": 0
+      "benchmark_count": 2
     },
     {
       "date": "2026-09-29",
@@ -239,7 +297,7 @@
       "date": "2026-09-24",
       "file": "daily-records/2026/09/2026-09-24.json",
       "etf_count": 3,
-      "benchmark_count": 0
+      "benchmark_count": 2
     },
     {
       "date": "2026-09-23",
