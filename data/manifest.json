@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19 11:46:05",
+  "generated_at": "2026-10-19 14:07:15",
   "etfs": [
     {
       "code": "513100",
@@ -76,6 +76,14 @@
       "status": "standby"
     },
     {
+      "id": "tinyright_quote",
+      "name": "tinyright 实时行情/估值",
+      "purpose": "【兜底】东财实时行情不可用时的报价与实时估值来源（仅历史脚本使用）",
+      "url_template": "https://n.tinyright.com/",
+      "enabled": true,
+      "status": "standby"
+    },
+    {
       "id": "tinyright_t1",
       "name": "tinyright T-1 估值",
       "purpose": "【兜底】官方净值尚未公布时的 T-1 估值；长假后存在已知系统性偏差，仅在前述来源缺失时使用",
@@ -106,38 +114,6 @@
       "url_template": "https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f12,f14,f2,f3,f13,f124&secids={secids}",
       "enabled": false,
       "status": "retired"
-    },
-    {
-      "id": "westock_quote",
-      "name": "腾讯自选股实时行情",
-      "purpose": "【已停用】连接器自 2026-09 起长期不可用；新链路改用 HTTP 多源交叉校验",
-      "url_template": "mcp:westock-mcp:data_quote",
-      "enabled": false,
-      "status": "unavailable"
-    },
-    {
-      "id": "westock_etf_detail",
-      "name": "腾讯自选股 ETF 详情",
-      "purpose": "【已停用】连接器自 2026-09 起长期不可用",
-      "url_template": "mcp:westock-mcp:data_etf",
-      "enabled": false,
-      "status": "unavailable"
-    },
-    {
-      "id": "westock_kline",
-      "name": "腾讯自选股历史 K 线",
-      "purpose": "【已停用】连接器自 2026-09 起长期不可用",
-      "url_template": "mcp:westock-mcp:data_kline",
-      "enabled": false,
-      "status": "unavailable"
-    },
-    {
-      "id": "westock_minute",
-      "name": "腾讯自选股分时数据",
-      "purpose": "【已停用】走势图于 2026-09-08 下线，且连接器长期不可用",
-      "url_template": "mcp:westock-mcp:data_minute",
-      "enabled": false,
-      "status": "unavailable"
     },
     {
       "id": "manual_historical_quote",

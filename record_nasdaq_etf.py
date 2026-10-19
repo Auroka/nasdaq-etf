@@ -912,7 +912,7 @@ def build_etf_rows(config: dict, now: dt.datetime) -> list[dict]:
         premium = as_float(realtime.get("premium"))
         if premium is None:
             premium = price / estimate - 1
-        source_ids = ["eastmoney_quote"] if quote_row else ["westock_etf_detail"]
+        source_ids = ["eastmoney_quote"] if quote_row else ["tinyright_quote"]
         trade_date = (q_time or now).date()
         # 走势图已下线（2026-09-08）：不再抓取分时数据
         trend = None
