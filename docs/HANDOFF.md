@@ -2,7 +2,7 @@
 
 本文面向接手维护本项目的 Agent 或开发者。目标是让接手者不依赖历史对话，也能理解项目用途、数据口径、运行方式、更新流程和常见故障。
 
-> **2026-09-08 变更：走势图已下线。** 页面不再展示分时走势，采集/回填流程也不抓取任何分钟数据。历史每日 JSON 中已存的 `trend` 字段原样保留、不再使用；新写入记录 `trend` 为 `null`。原「分钟走势补录与修复」章节已随功能下线删除，`--refresh-trends` 为 no-op。
+> **2026-09-08 变更：走势图已下线。** 页面不再展示分时走势，采集/回填流程也不抓取任何分钟数据。历史每日 JSON 中已存的 `trend` 字段原样保留、不再使用；新写入记录 `trend` 为 `null`。原「分钟走势补录与修复」章节及相关命令已随功能和旧脚本一并删除。
 
 > **2026-10-19 变更：取数链路改为 HTTP 多源交叉校验，`fetch_nasdaq_data.py` 成为唯一入口。**
 > 早期依赖的第三方行情连接器自 2026-09 起长期不可用，继续依赖它会导致每日都需人工兜底。新脚本：
@@ -11,8 +11,8 @@
 > - QQQ/NDX：Nasdaq 官方（主）+ 新浪美股日 K（校验，NDX 用 `.NDX`），历史最高用全历史收盘序列；
 > - 写入前取齐所有目标日，任一失败整体不写；写入后按中国/美国交易日历审计，缺一天即失败。
 >
-> `record_nasdaq_etf.py` 降级为历史脚本（仍被新脚本复用读写函数）。项目 skill：`.workbuddy/skills/nasdaq-data-completion/SKILL.md`。
-> §11.2 的历史脚本命令仅供追溯，日常请以本段与 `CLAUDE.md` 为准。
+> 旧的历史采集脚本已删除，其读写函数抽离为 `nasdaq_store.py`（纯 I/O，不含取数）。项目 skill：`.workbuddy/skills/nasdaq-data-completion/SKILL.md`。
+> §11 的命令表与 `CLAUDE.md` 为准。
 
 ## 1. 项目概览
 
@@ -95,7 +95,7 @@ QQQ/NDX 记录：46 行
 
 ```mermaid
 flowchart LR
-    A[data_sources.json] --> B[record_nasdaq_etf.py]
+    A[data_sources.json] --> B[fetch_nasdaq_data.py]
     C[外部行情和估值接口] --> B
     B --> D[data/manifest.json]
     B --> E[data/daily-records/YYYY/MM/YYYY-MM-DD.json]
@@ -146,7 +146,7 @@ nasdaq-etf/
   package-lock.json                 Node 依赖锁文件
   package.json                      Node 脚本和依赖
   README.md                         项目简介和常用命令
-  record_nasdaq_etf.py              历史采集脚本（仅参考，日常不再调用）
+  nasdaq_store.py                   数据存储层（读记录、写 JSON/manifest/页面壳，不含取数）
   tsconfig.json                     TypeScript 配置
   .workbuddy/skills/nasdaq-data-completion/SKILL.md
                                     项目级 skill：记录/补全纳指数据时优先使用
@@ -155,7 +155,8 @@ nasdaq-etf/
 维护边界：
 
 - 调整标的或接口：修改 `data_sources.json`。
-- 调整采集、回填、口径或写入：修改 `fetch_nasdaq_data.py`（它复用 `record_nasdaq_etf.py` 的 `read_records` / `write_rows` 负责读写与页面重建）。
+- 调整采集、回填或口径：修改 `fetch_nasdaq_data.py`。
+- 调整写入格式（JSON 结构、manifest、页面壳）：修改 `nasdaq_store.py`。
 - 调整页面：修改 `src/`，然后重新构建 `assets/`。
 - 不手工修改 `assets/app.js`、`assets/app.css`。
 - 不把业务逻辑写进 `index.html`；它是生成的页面壳。
@@ -469,7 +470,7 @@ Get-Content -Raw -Encoding utf8 .\data\manifest.json | ConvertFrom-Json | Out-Nu
 Get-ChildItem .\data\daily-records -Recurse -Filter *.json | ForEach-Object {
   Get-Content -Raw -Encoding utf8 $_.FullName | ConvertFrom-Json | Out-Null
 }
-python -m py_compile fetch_nasdaq_data.py record_nasdaq_etf.py
+python -m py_compile fetch_nasdaq_data.py nasdaq_store.py
 npm run typecheck
 npm run build
 ```
@@ -541,7 +542,7 @@ python fetch_nasdaq_data.py --date 2026-06-15   # 该行情日之后的第一个
 ```powershell
 $dates = @("2026-06-01", "2026-06-02", "2026-06-03")
 foreach ($date in $dates) {
-  python record_nasdaq_etf.py --backfill-date $date
+  python fetch_nasdaq_data.py --date $date
   if ($LASTEXITCODE -ne 0) { throw "Backfill failed: $date" }
 }
 ```
@@ -561,30 +562,6 @@ foreach ($date in $dates) {
 | `python fetch_nasdaq_data.py --since YYYY-MM-DD` | 限定审计/补全起点 | 取决于其他参数 |
 | `python fetch_nasdaq_data.py --json` | 输出机器可读结果（进度走 stderr） | 取决于其他参数 |
 | `python fetch_nasdaq_data.py --now "YYYY-MM-DD HH:MM"` | 模拟运行时间（测试场景） | 取决于其他参数 |
-
-### 11.2 历史脚本（仅参考，日常不再调用）
-
-| 命令 | 用途 | 是否写文件 |
-| --- | --- | --- |
-| `python record_nasdaq_etf.py` | 记录当前中国交易日 | 是 |
-| `python record_nasdaq_etf.py --dry-run` | 预览当前数据 | 否 |
-| `python record_nasdaq_etf.py --force` | 绕过星期、收盘时间和 ETF 行情日期检查 | 是，谨慎使用 |
-| `python record_nasdaq_etf.py --init-only` | 按已有数据重建清单和页面壳 | 是 |
-| `python record_nasdaq_etf.py --backfill-date YYYY-MM-DD` | 补 ETF 和对应 QQQ/NDX（节后首日会因估值日期不匹配失败） | 是 |
-| `python record_nasdaq_etf.py --backfill-benchmark-date YYYY-MM-DD` | 只补某个美股行情日 | 是 |
-| `python record_nasdaq_etf.py --track-date YYYY-MM-DD` | 配合基准补录指定跟踪日期 | 是 |
-| `python record_nasdaq_etf.py --refresh-benchmarks` | 重算已有基准行并补部分缺口 | 是 |
-| `python record_nasdaq_etf.py --refresh-trends` | 已弃用（no-op） | 否 |
-| `python record_nasdaq_etf.py --output PATH` | 指定页面输出路径 | 取决于其他参数 |
-| `python record_nasdaq_etf.py --data-output PATH` | 指定数据索引输出路径 | 取决于其他参数 |
-| `python record_nasdaq_etf.py --source-config PATH` | 指定数据源配置 | 取决于其他参数 |
-
-`--refresh-benchmarks` 的边界（历史脚本）：
-
-- 会重算现有 QQQ/NDX 记录的收盘、涨幅、历史最高收盘和回撤。
-- 会尝试为已有 ETF 日期补基准记录。
-- 不会凭空创建不在当前数据集日期范围内的孤立历史文件。
-- 为避免不必要请求，不主动刷新已有分钟走势。
 
 ## 12. 前端开发与 GitHub Pages
 
@@ -741,7 +718,7 @@ index.html
 ### 15.1 修改 Python 后
 
 ```powershell
-python -m py_compile fetch_nasdaq_data.py record_nasdaq_etf.py
+python -m py_compile fetch_nasdaq_data.py nasdaq_store.py
 ```
 
 涉及数据源或解析逻辑时，再使用 `--dry-run` 或指定日期补录验证真实接口响应。

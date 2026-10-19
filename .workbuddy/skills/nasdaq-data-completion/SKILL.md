@@ -21,7 +21,7 @@ python fetch_nasdaq_data.py --json
 
 - 进度信息走 stderr，最终结果是 stdout 上的 JSON。
 - 不要手工调用数据源、不要直接编辑 `data/` 下的 JSON。
-- `record_nasdaq_etf.py` 是历史遗留脚本（存在节后首日估值失败等问题），日常记录不再使用。
+- 旧的历史脚本已删除；`nasdaq_store.py` 只负责读写数据文件，不含取数逻辑，不要直接调用它取数。
 
 ## 脚本自动处理的场景
 

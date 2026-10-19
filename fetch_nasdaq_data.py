@@ -52,7 +52,7 @@ from typing import Iterable
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 
-import record_nasdaq_etf as project
+from nasdaq_store import read_records as read_project_records, write_rows as write_project_rows
 
 APP_DIR = Path(__file__).resolve().parent
 DATA_MANIFEST = APP_DIR / "data" / "manifest.json"
@@ -152,7 +152,7 @@ class ProjectData:
 
 def load_project_data() -> ProjectData:
     try:
-        etf_records, benchmark_records = project.read_records(DATA_MANIFEST)
+        etf_records, benchmark_records = read_project_records(DATA_MANIFEST)
     except FileNotFoundError as exc:
         raise DataError(f"数据索引或每日文件缺失：{exc}") from exc
     except (json.JSONDecodeError, ValueError) as exc:
@@ -873,7 +873,7 @@ def write_rows(etf_rows: list[dict], benchmark_rows: list[dict], config: dict) -
     html_backup = INDEX_HTML.read_text(encoding="utf-8") if INDEX_HTML.exists() else None
 
     clean_etf_rows = [{key: value for key, value in row.items() if not key.startswith("_")} for row in etf_rows]
-    etf_changed, benchmark_changed = project.write_rows(
+    etf_changed, benchmark_changed = write_project_rows(
         INDEX_HTML, DATA_MANIFEST, config, clean_etf_rows, benchmark_rows
     )
 

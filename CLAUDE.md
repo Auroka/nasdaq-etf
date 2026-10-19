@@ -8,13 +8,13 @@
 ## 走势图已下线（2026-09-08 用户决定）
 - 页面不再渲染「走势」列（分时迷你图），采集与回填流程**不再抓取任何分时/分钟数据（trend）**。
 - 历史每日 JSON 中已存在的 `trend` 字段原样保留（数据无损、不主动清理），但不再校验、不再使用。
-- `python record_nasdaq_etf.py --refresh-trends` 已弃用为 no-op（仅保留参数兼容）；新写入的记录 `trend` 均为 `null`。
+- 新写入的记录 `trend` 均为 `null`；旧脚本中的 `--refresh-trends` 等命令已随脚本一并删除。
 - 早盘停牌导致的分时缺口等知识不再作为数据操作依据。
 
 ## 文件约定
 - `data_sources.json`：项目唯一的数据源和跟踪标的配置入口；新增或调整接口、代码、标的时先改这里。
 - `fetch_nasdaq_data.py`：**当前唯一取数入口**。自动判断收盘状态、补齐所有缺失交易日、多源交叉校验、写后审计。
-- `record_nasdaq_etf.py`：历史脚本（早期 HTTP 实现，保留供参考与旧命令兼容），日常不再调用。
+- `nasdaq_store.py`：数据存储层（读每日记录、写 JSON / manifest / 页面壳），不含任何取数逻辑。
 - `.workbuddy/skills/nasdaq-data-completion/SKILL.md`：项目级 skill，「记录/补全纳指数据」任务优先使用。
 - `data/manifest.json`：页面数据索引；只放生成时间、跟踪标的、数据源和每日文件引用。
 - `data/daily-records/YYYY/MM/YYYY-MM-DD.json`：按交易日期和年月目录拆分的每日记录；ETF 使用 `trade_date` 归档，QQQ/NDX 使用 `quote_date` 归档；相同日期和代码/标的重复运行时更新原行。
@@ -49,7 +49,7 @@
 - 任一关键数值必须两源一致；不一致且无法仲裁时**整体终止，不写入任何数据**。
 - 写入前必须取齐所有目标日；写入后按中国/美国交易日历审计，缺一天即视为失败。
 - 溢价率 = `price / estimate - 1`，必须复算校验与 premium 字段一致。
-- `record_nasdaq_etf.py` 降级为历史脚本（存在节后首日估值失败等问题），日常不再调用。
+- 旧的 `record_nasdaq_etf.py` 已删除，不存在任何历史取数入口，请勿再引用。
 
 ### Skill
 `.workbuddy/skills/nasdaq-data-completion/SKILL.md`：本项目所有「记录 / 更新 / 补全纳指数据」的任务优先使用该 skill，不要手工取数或直接改 JSON。
