@@ -85,14 +85,19 @@ python fetch_nasdaq_data.py --now "2026-10-19 15:30"  # 模拟运行时间（测
 
 用简洁列表说明：本次写入行数（ETF x 行 / 基准 y 行）、涉及的交易日、审计是否通过；若 `mode: noop` 则说明「已是最新且完整」。结果只在本会话内报告。
 
-## 提交（按需）
+## 提交并推送（默认必做）
 
-默认**不自动提交**。只有用户明确要求提交，或本轮属于无人值守的自动化运行时，才按项目既有约定提交数据文件：
+**只要本轮有实际写入（`mode: write`，`written` 行数 > 0），处理完数据后必须提交并推送到 GitHub** —— 用户 2026-10-20 明确要求，不再"按需"。
+仓库：`git@github.com:Auroka/nasdaq-etf.git`，分支 `main`（SSH 已可用，`git ls-remote` 可直连）。
 
 ```bash
-git add index.html data/manifest.json data/daily-records
-git commit -m "Record Nasdaq tracking YYYY-MM-DD"   # 用本次最新记录的交易日
+git add data/manifest.json data/daily-records
+git commit -m "chore:补全纳指数据至 YYYY-MM-DD"   # 用本次最新记录的交易日
 git push origin main
 ```
 
-`index.html` 没有实际 diff 时不要提交；`assets/`、`src/`、`node_modules/` 与数据更新无关。
+- `index.html` 没有实际 diff 时不要提交（脚本运行后应先确认 `git diff index.html` 为空）；`assets/`、`src/`、`node_modules/` 与数据更新无关，不要提交。
+- 提交前先 `git status --short` 确认只含 `data/` 下的改动。
+- `mode: noop`（数据已完整、无写入）时**不提交、不推送**，避免空提交。
+- 推送失败（无网络/凭证）时如实报告，并保留本地提交，告知用户需手动 `git push origin main`；不要 reset 掉已提交的数据。
+- 推送成功后在报告里给出一句话：已推送至 `origin/main`（含 commit 短哈希）。
