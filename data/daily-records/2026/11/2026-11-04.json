@@ -1,0 +1,91 @@
+{
+  "date": "2026-11-04",
+  "etf_records": [
+    {
+      "trade_date": "2026-11-04",
+      "recorded_at": "2026-11-11 09:57:54",
+      "code": "513100",
+      "name": "纳指ETF国泰",
+      "price": 2.242,
+      "daily_change": 0.020482476103777847,
+      "estimate": 1.8847,
+      "premium": 0.18957924338090937,
+      "source_ids": [
+        "sina_daily_kline",
+        "tencent_kline",
+        "eastmoney_fund_nav"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-11-04",
+      "recorded_at": "2026-11-11 09:57:54",
+      "code": "159501",
+      "name": "纳指ETF嘉实",
+      "price": 2.142,
+      "daily_change": 0.020000000000000018,
+      "estimate": 1.7704,
+      "premium": 0.20989606868504285,
+      "source_ids": [
+        "sina_daily_kline",
+        "tencent_kline",
+        "eastmoney_fund_nav"
+      ],
+      "trend": null
+    },
+    {
+      "trade_date": "2026-11-04",
+      "recorded_at": "2026-11-11 09:57:54",
+      "code": "159659",
+      "name": "纳斯达克100ETF招商",
+      "price": 2.353,
+      "daily_change": 0.01861471861471875,
+      "estimate": 2.0375,
+      "premium": 0.15484662576687125,
+      "source_ids": [
+        "sina_daily_kline",
+        "tencent_kline",
+        "eastmoney_fund_nav"
+      ],
+      "trend": null
+    }
+  ],
+  "benchmark_records": [
+    {
+      "track_date": "2026-11-05",
+      "recorded_at": "2026-11-11 09:57:54",
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "value": 691.95,
+      "daily_change": 0.009733247723558325,
+      "history_high": 759.66,
+      "drawdown": -0.08913198009635881,
+      "history_high_date": "2026-10-06",
+      "quote_date": "2026-11-04",
+      "unit": "USD",
+      "source_ids": [
+        "nasdaq_api_historical",
+        "sina_us_daily"
+      ],
+      "trend": null
+    },
+    {
+      "track_date": "2026-11-05",
+      "recorded_at": "2026-11-11 09:57:54",
+      "symbol": "NDX",
+      "name": "Nasdaq 100 Index",
+      "value": 28437.17,
+      "daily_change": 0.009116665353690934,
+      "history_high": 31224.69,
+      "drawdown": -0.08927294394275809,
+      "history_high_date": "2026-10-06",
+      "quote_date": "2026-11-04",
+      "unit": "points",
+      "source_ids": [
+        "nasdaq_api_historical",
+        "sina_us_daily"
+      ],
+      "trend": null
+    }
+  ]
+}
