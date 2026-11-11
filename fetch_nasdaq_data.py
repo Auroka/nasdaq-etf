@@ -93,6 +93,19 @@ class DataError(RuntimeError):
 # ---------------------------------------------------------------------------
 # HTTP
 # ---------------------------------------------------------------------------
+def _ssl_context(force_tls12: bool = False) -> ssl.SSLContext:
+    """默认 TLS 上下文；force_tls12=True 时把版本上限锁到 TLS 1.2。
+
+    部分网络（中间设备、反爬风控）会打断 TLS 1.3 握手，表现为
+    `SSL: UNEXPECTED_EOF_WHILE_READING` / `handshake operation timed out`
+    或莫名的 403；此时退回 TLS 1.2 即可恢复，故作为失败后的兜底。
+    """
+    context = ssl.create_default_context()
+    if force_tls12:
+        context.maximum_version = ssl.TLSVersion.TLSv1_2
+    return context
+
+
 def http_text(
     url: str,
     *,
@@ -104,6 +117,7 @@ def http_text(
     """带重试与 HTTP 降级的 GET。
 
     东财 push2 域名在部分网络下 HTTPS 会被直接断连，HTTP 反而可用，故提供降级。
+    每个候选地址依次尝试「默认 TLS」与「TLS 1.2 上限」两套上下文。
     """
     candidates = [url]
     if http_fallback and url.startswith("https://"):
@@ -112,17 +126,20 @@ def http_text(
     last_error: Exception | None = None
     for attempt in range(retries):
         for candidate in candidates:
-            request = urllib.request.Request(
-                candidate,
-                headers={"User-Agent": USER_AGENT, "Accept": "*/*", **(headers or {})},
-            )
-            try:
-                with urllib.request.urlopen(request, timeout=timeout, context=ssl.create_default_context()) as response:
-                    raw = response.read()
-                    charset = response.headers.get_content_charset() or "utf-8"
-                    return raw.decode(charset, "replace")
-            except (HTTPError, URLError, TimeoutError, OSError, RemoteDisconnected) as exc:
-                last_error = exc
+            for force_tls12 in (False, True):
+                request = urllib.request.Request(
+                    candidate,
+                    headers={"User-Agent": USER_AGENT, "Accept": "*/*", **(headers or {})},
+                )
+                try:
+                    with urllib.request.urlopen(
+                        request, timeout=timeout, context=_ssl_context(force_tls12)
+                    ) as response:
+                        raw = response.read()
+                        charset = response.headers.get_content_charset() or "utf-8"
+                        return raw.decode(charset, "replace")
+                except (HTTPError, URLError, TimeoutError, OSError, RemoteDisconnected) as exc:
+                    last_error = exc
         if attempt < retries - 1:
             time.sleep(0.6 * (attempt + 1))
     raise DataError(f"请求失败（{retries} 次重试）：{url} :: {last_error}")
